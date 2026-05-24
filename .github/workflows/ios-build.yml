@@ -27,7 +27,9 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd ios
-          # Ép hệ thống bật New Architecture để khớp với yêu cầu của Reanimated
+          # Tự động chèn lệnh cho phép cấu hình Firebase chạy dạng mô-đun vào đầu file Podfile
+          sed -i '' "1s/^/use_modular_headers!\n/" Podfile
+          
           export RCT_NEW_ARCH_ENABLED=1
           pod install
 
