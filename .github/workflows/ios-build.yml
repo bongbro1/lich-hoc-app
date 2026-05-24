@@ -9,6 +9,8 @@ jobs:
     runs-on: macos-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      RCT_NEW_ARCH_ENABLED: 1 # Kích hoạt New Architecture đồng bộ cho toàn bộ tiến trình
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,41 +26,49 @@ jobs:
           npm install
           npx expo prebuild --platform ios --clean
 
-      - name: Install CocoaPods
+      - name: Configure Podfile safely
         run: |
           cd ios
           # 1. Bật mô-đun hóa cho Firebase
           sed -i '' "1s/^/use_modular_headers!\n/" Podfile
           
-          # 2. Tìm khối post_install có sẵn của Expo và chèn đoạn code ép nâng iOS 14.0 vào ngay dưới đó
-          sed -i '' "/post_install do |installer|/a\\
-          installer.pods_project.targets.each do |target|\\
-            target.build_configurations.each do |config|\\
-              config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'\\
-            end\\
-          end\\
-          " Podfile
+          # 2. Sử dụng đoạn script Ruby an toàn để ghi đè Deployment Target lên tất cả các bên thứ 3 (Pods) mà không phá vỡ cấu trúc file
+          cat << 'EOF' >> Podfile
 
-          export RCT_NEW_ARCH_ENABLED=1
+          # Đoạn mã bổ sung để ép cấu hình iOS 14.0 cho các thư viện Pods phụ thuộc
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+              end
+            end
+          end
+          EOF
+
           pod install
 
-      - name: Build Xcode Project
+      - name: Build Xcode Project (Unsigned)
         run: |
+          # Thay thế "archive" bằng "build" để phù hợp với việc tắt chữ ký (Code Sign)
           xcodebuild -workspace ios/*.xcworkspace \
                      -scheme "LchHc" \
                      -configuration Release \
                      -sdk iphoneos \
+                     -derivedDataPath build_output \
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGN_ENTITLEMENTS="" \
                      COMPILER_INDEX_STORE_ENABLE=NO \
                      GCC_WARN_INHIBIT_ALL_WARNINGS=YES \
                      ANY_WARNINGS_AS_ERRORS=NO \
-                     clean archive -archivePath build/App.xcarchive
+                     clean build
 
       - name: Create Unsigned IPA
         run: |
           mkdir -p build/output/Payload
-          cp -r build/App.xcarchive/Products/Applications/*.app build/output/Payload/
+          # Sao chép file .app trực tiếp từ thư mục build của Xcode vào Payload
+          cp -r build_output/Build/Products/Release-iphoneos/*.app build/output/Payload/
           cd build/output
           zip -r App-Unsigned.ipa Payload
 
