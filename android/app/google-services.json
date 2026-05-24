@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "533041299457",
+    "project_id": "lichhoc-beb3e",
+    "storage_bucket": "lichhoc-beb3e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533041299457:android:87062efb35a6d0c7a84000",
+        "android_client_info": {
+          "package_name": "com.bongbro.lichhocapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKD8Ebab7dKi3FXGqQlg-fadf71of55lA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
