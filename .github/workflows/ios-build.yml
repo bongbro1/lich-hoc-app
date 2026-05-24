@@ -1,0 +1,51 @@
+name: Build iOS Raw IPA
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-raw-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npx expo prebuild --platform ios --clean
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+
+      - name: Build Xcode Project
+        run: |
+          xcodebuild -workspace ios/*.xcworkspace \
+                     -scheme $(basename ios/*.xcworkspace .xcworkspace) \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     clean archive -archivePath build/App.xcarchive
+
+      - name: Create Unsigned IPA
+        run: |
+          mkdir -p build/output/Payload
+          cp -r build/App.xcarchive/Products/Applications/*.app build/output/Payload/
+          cd build/output
+          zip -r App-Unsigned.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lịch-Học-App-Raw
+          path: build/output/App-Unsigned.ipa

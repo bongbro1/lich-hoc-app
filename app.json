@@ -1,30 +1,75 @@
 {
   "expo": {
-    "name": "lich-hoc-app",
-    "slug": "lich-hoc-app",
+    "name": "Lịch Học",
+    "slug": "lich-hoc",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon1.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#009899"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bongbro.lichhocapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS"
+      ],
+      "package": "com.bongbro.lichhocapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+        "foregroundImage": "./assets/splash-icon.png",
+        "backgroundImage": "./assets/icon-background.png",
+        "backgroundColor": "#009899"
+      }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "jsEngine": "hermes",
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#009899",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 300
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 34,
+            "usesCleartextTraffic": true,
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraMavenRepos": [
+              "https://jitpack.io"
+            ],
+            "abiFilters": [
+              "armeabi-v7a",
+              "arm64-v8a"
+            ],
+            "enableMinifyInReleaseBuilds": true
+          }
+        }
+      ],
+      "@react-native-firebase/app"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "deb2ba1d-49fa-4f0b-a4d3-91e7756fbdc6"
+      }
+    },
+    "owner": "bongbro"
   }
 }
