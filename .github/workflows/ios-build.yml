@@ -27,20 +27,17 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd ios
-          # 1. Bật modular headers cho Firebase
+          # 1. Bật mô-đun hóa cho Firebase
           sed -i '' "1s/^/use_modular_headers!\n/" Podfile
           
-          # 2. Chèn đoạn script ép nâng IPHONEOS_DEPLOYMENT_TARGET lên iOS 14.0 vào cuối Podfile
-          cat << 'EOF' >> Podfile
-
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-              end
-            end
-          end
-          EOF
+          # 2. Tìm khối post_install có sẵn của Expo và chèn đoạn code ép nâng iOS 14.0 vào ngay dưới đó
+          sed -i '' "/post_install do |installer|/a\\
+          installer.pods_project.targets.each do |target|\\
+            target.build_configurations.each do |config|\\
+              config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'\\
+            end\\
+          end\\
+          " Podfile
 
           export RCT_NEW_ARCH_ENABLED=1
           pod install
