@@ -8,8 +8,7 @@ jobs:
   build-raw-ios:
     runs-on: macos-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      RCT_NEW_ARCH_ENABLED: 1 # Kích hoạt New Architecture đồng bộ cho toàn bộ tiến trình
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
 
     steps:
       - name: Checkout repository
@@ -18,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: 'npm'
 
       - name: Install Dependencies
@@ -44,9 +43,13 @@ jobs:
 
       - name: Build Xcode Project (Unsigned)
         run: |
+          # Tìm scheme name động từ thư mục ios được Expo sinh ra để tránh lỗi sai tên dự án
+          SCHEME_NAME=$(basename ios/*.xcodeproj .xcodeproj)
+          echo "🚀 Found Scheme Name: $SCHEME_NAME"
+          
           # Dùng "clean build" kết hợp tắt chữ ký thay vì dùng lệnh "archive"
           xcodebuild -workspace ios/*.xcworkspace \
-                     -scheme "LchHc" \
+                     -scheme "$SCHEME_NAME" \
                      -configuration Release \
                      -sdk iphoneos \
                      -derivedDataPath build_output \
