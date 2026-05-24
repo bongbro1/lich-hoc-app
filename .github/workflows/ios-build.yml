@@ -32,24 +32,19 @@ jobs:
           # 1. Bật mô-đun hóa cho Firebase
           sed -i '' "1s/^/use_modular_headers!\n/" Podfile
           
-          # 2. Sử dụng đoạn script Ruby an toàn để ghi đè Deployment Target lên tất cả các bên thứ 3 (Pods) mà không phá vỡ cấu trúc file
-          cat << 'EOF' >> Podfile
-
-          # Đoạn mã bổ sung để ép cấu hình iOS 14.0 cho các thư viện Pods phụ thuộc
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-              end
-            end
-          end
-          EOF
+          # 2. Chèn đoạn code nâng iOS 14.0 vào ngay bên trong khối post_install có sẵn của Expo
+          sed -i '' '/post_install do |installer|/a\
+            installer.pods_project.targets.each do |target|\
+              target.build_configurations.each do |config|\
+                config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "14.0"\
+              end\
+            end' Podfile
 
           pod install
 
       - name: Build Xcode Project (Unsigned)
         run: |
-          # Thay thế "archive" bằng "build" để phù hợp với việc tắt chữ ký (Code Sign)
+          # Dùng "clean build" kết hợp tắt chữ ký thay vì dùng lệnh "archive"
           xcodebuild -workspace ios/*.xcworkspace \
                      -scheme "LchHc" \
                      -configuration Release \
