@@ -8,7 +8,7 @@ jobs:
   build-raw-ios:
     runs-on: macos-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Ép hệ thống chạy Node 24 để hết báo lỗi vàng
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24 # Nâng cấp lên Node 24 mới nhất
+          node-version: 24
           cache: 'npm'
 
       - name: Install Dependencies
@@ -27,6 +27,8 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd ios
+          # Ép hệ thống bật New Architecture để khớp với yêu cầu của Reanimated
+          export RCT_NEW_ARCH_ENABLED=1
           pod install
 
       - name: Build Xcode Project
