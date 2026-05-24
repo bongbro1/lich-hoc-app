@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bongbro.lichhocapp",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
