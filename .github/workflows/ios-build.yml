@@ -7,6 +7,8 @@ on:
 jobs:
   build-raw-ios:
     runs-on: macos-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # Ép hệ thống chạy Node 24 để hết báo lỗi vàng
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -14,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24 # Nâng cấp lên Node 24 mới nhất
           cache: 'npm'
 
       - name: Install Dependencies
@@ -30,7 +32,7 @@ jobs:
       - name: Build Xcode Project
         run: |
           xcodebuild -workspace ios/*.xcworkspace \
-                     -scheme $(basename ios/*.xcworkspace .xcworkspace) \
+                     -scheme "lichhocapp" \
                      -configuration Release \
                      -sdk iphoneos \
                      CODE_SIGNING_ALLOWED=NO \
@@ -47,5 +49,5 @@ jobs:
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Lịch-Học-App-Raw
+          name: Lich-Hoc-App-Raw
           path: build/output/App-Unsigned.ipa
