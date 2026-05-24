@@ -21,24 +21,61 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Dependencies
-        run: |
-          npm install
-          npx expo prebuild --platform ios --clean --no-install
+      - name: Cache Node Modules
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install npm dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm install
+
+      - name: Generate iOS directory (No Install)
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Cache CocoaPods
+        id: pods-cache
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
 
       - name: Configure Podfile and Install Pods
         run: |
           cd ios
-          # Patch Podfile bằng Ruby để giải quyết lỗi mô-đun hóa Firebase và nâng IPHONEOS_DEPLOYMENT_TARGET lên 14.0 (tránh lỗi Xcode 16)
+          # Patch Podfile bằng Ruby để giải quyết lỗi mô-đun hóa Firebase, nâng target lên 14.0 và loại bỏ cờ lỗi trong BoringSSL/gRPC trên Xcode 16
           ruby -e '
             podfile = File.read("Podfile")
             podfile = "use_modular_headers!\n" + podfile
-            patch = "\n    installer.pods_project.targets.each do |target|\n      target.build_configurations.each do |config|\n        config.build_settings[\"IPHONEOS_DEPLOYMENT_TARGET\"] = \"14.0\"\n      end\n    end\n"
-            podfile.gsub!(/post_install do \|installer\|/, "post_install do |installer|" + patch)
+            patch = %q{
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = "14.0"
+      end
+      
+      # Sửa lỗi Xcode 16 compiler flag trong BoringSSL-GRPC và gRPC
+      if target.name == "BoringSSL-GRPC" || target.name == "gRPC-C++"
+        target.source_build_phase.files.each do |file|
+          if file.settings && file.settings["COMPILER_FLAGS"]
+            flags = file.settings["COMPILER_FLAGS"].split
+            flags.reject! { |flag| flag == "-GCC_WARN_INHIBIT_ALL_WARNINGS" }
+            file.settings["COMPILER_FLAGS"] = flags.join(" ")
+          end
+        end
+      end
+    end
+            }
+            podfile.gsub!(/post_install do \|installer\|/, "post_install do |installer|\n" + patch)
             File.write("Podfile", podfile)
           '
           
-          # Tiến hành cài đặt CocoaPods thủ công
+          # Tiến hành cài đặt CocoaPods (nếu có cache hit thì CocoaPods sẽ hoàn tất cực nhanh)
           pod install
           cd ..
 
@@ -52,7 +89,7 @@ jobs:
           WORKSPACE_PATH=$(ls -d ios/*.xcworkspace | head -n 1)
           echo "🚀 Found Workspace: $WORKSPACE_PATH"
           
-          # 3. Dùng "clean build" kết hợp tắt chữ ký
+          # 3. Dùng "clean build" kết hợp tắt chữ ký (loại bỏ cờ chặn cảnh báo gây lỗi ScanDependencies trên Xcode 16)
           xcodebuild -workspace "$WORKSPACE_PATH" \
                      -scheme "$SCHEME_NAME" \
                      -configuration Release \
@@ -63,8 +100,6 @@ jobs:
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGN_ENTITLEMENTS="" \
                      COMPILER_INDEX_STORE_ENABLE=NO \
-                     GCC_WARN_INHIBIT_ALL_WARNINGS=YES \
-                     ANY_WARNINGS_AS_ERRORS=NO \
                      clean build
 
       - name: Create Unsigned IPA
