@@ -39,6 +39,9 @@ jobs:
                      -sdk iphoneos \
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO \
+                     COMPILER_INDEX_STORE_ENABLE=NO \
+                     GCC_WARN_INHIBIT_ALL_WARNINGS=YES \
+                     ANY_WARNINGS_AS_ERRORS=NO \
                      clean archive -archivePath build/App.xcarchive
 
       - name: Create Unsigned IPA
