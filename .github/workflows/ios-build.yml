@@ -29,12 +29,24 @@ jobs:
 
       - name: Build Xcode Project (Unsigned)
         run: |
-          # Tìm scheme name động từ thư mục ios được Expo sinh ra để tránh lỗi sai tên dự án
+          # 1. Chạy pod install thủ công nếu Expo prebuild bỏ qua nó
+          cd ios
+          if [ ! -d *.xcworkspace ]; then
+            echo "⚠️ No .xcworkspace found, running pod install..."
+            pod install
+          fi
+          cd ..
+
+          # 2. Tìm scheme name động để tránh lỗi sai tên dự án
           SCHEME_NAME=$(basename ios/*.xcodeproj .xcodeproj)
           echo "🚀 Found Scheme Name: $SCHEME_NAME"
+
+          # 3. Tìm workspace path động để tránh lỗi wildcard không mở rộng
+          WORKSPACE_PATH=$(ls -d ios/*.xcworkspace | head -n 1)
+          echo "🚀 Found Workspace: $WORKSPACE_PATH"
           
-          # Dùng "clean build" kết hợp tắt chữ ký thay vì dùng lệnh "archive"
-          xcodebuild -workspace ios/*.xcworkspace \
+          # 4. Dùng "clean build" kết hợp tắt chữ ký
+          xcodebuild -workspace "$WORKSPACE_PATH" \
                      -scheme "$SCHEME_NAME" \
                      -configuration Release \
                      -sdk iphoneos \
