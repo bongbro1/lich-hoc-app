@@ -37,14 +37,13 @@ jobs:
       - name: Generate iOS directory (No Install)
         run: npx expo prebuild --platform ios --no-install
 
-      - name: Cache CocoaPods
-        id: pods-cache
+      - name: Cache CocoaPods downloads
         uses: actions/cache@v4
         with:
-          path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('package-lock.json') }}
+          path: ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-cocoapods-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-pods-
+            ${{ runner.os }}-cocoapods-
 
       - name: Configure Podfile and Install Pods
         run: |
@@ -75,8 +74,8 @@ jobs:
             File.write("Podfile", podfile)
           '
           
-          # Tiến hành cài đặt CocoaPods (nếu có cache hit thì CocoaPods sẽ hoàn tất cực nhanh)
-          pod install
+          # Tiến hành cài đặt CocoaPods với cập nhật repo để đảm bảo tải đúng module map
+          pod install --repo-update
           cd ..
 
       - name: Build Xcode Project (Unsigned)
