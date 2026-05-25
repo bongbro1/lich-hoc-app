@@ -51,7 +51,6 @@ jobs:
           # Patch Podfile bằng Ruby để giải quyết lỗi mô-đun hóa Firebase, nâng target lên 14.0 và loại bỏ cờ lỗi trong BoringSSL/gRPC trên Xcode 16
           ruby -e '
             podfile = File.read("Podfile")
-            podfile = "use_modular_headers!\n" + podfile
             patch = %q{
               installer.pods_project.targets.each do |target|
                 target.build_configurations.each do |config|
