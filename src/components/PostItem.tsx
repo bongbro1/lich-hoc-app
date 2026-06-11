@@ -1,10 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
     View,
     Text,
-    Image,
     TextInput,
-    TouchableOpacity,
     StyleSheet,
     Dimensions,
     Modal,
@@ -12,7 +10,9 @@ import {
     Pressable,
     TouchableWithoutFeedback,
     Share,
+    Platform
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ReactionBadge, ReactionBar, reactionIcons } from './ReactionBar';
 import { useUser } from '../contexts/UserContext';
@@ -44,25 +44,27 @@ type PostItemProps = {
 const windowWidth = Dimensions.get('window').width;
 const spacing = 4;
 
-function PostImages({ images }: { images: string[] }) {
+function PostImages({ images, hasText }: { images: string[]; hasText: boolean }) {
     if (!images || images.length === 0) return null;
 
     const imageSize = (windowWidth - 48 - spacing * 2) / 3;
     const { openModal } = useImageFullModal();
 
     return (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, marginBottom: 4 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: hasText ? 12 : 0, marginBottom: 4 }}>
             {images.map((uri, index) => (
-                <TouchableOpacity
-                    activeOpacity={0.9}
+                <Pressable
                     key={`${uri}-${index}`}
                     onPress={() => openModal(images, index)}
-                    style={{
-                        width: imageSize,
-                        height: imageSize,
-                        marginRight: (index + 1) % 3 === 0 ? 0 : spacing,
-                        marginBottom: spacing,
-                    }}
+                    style={({ pressed }) => [
+                        {
+                            width: imageSize,
+                            height: imageSize,
+                            marginRight: (index + 1) % 3 === 0 ? 0 : spacing,
+                            marginBottom: spacing,
+                            transform: [{ scale: pressed ? 0.96 : 1 }]
+                        }
+                    ]}
                 >
                     <Image
                         source={{ uri }}
@@ -72,8 +74,11 @@ function PostImages({ images }: { images: string[] }) {
                             borderRadius: 12,
                             backgroundColor: '#F1F5F9',
                         }}
+                        contentFit="cover"
+                        transition={200}
+                        cachePolicy="memory-disk"
                     />
-                </TouchableOpacity>
+                </Pressable>
             ))}
         </View>
     );
@@ -96,13 +101,27 @@ const PostItem: React.FC<PostItemProps> = ({
         subscribePostReactionSummary,
     } = usePostVM();
 
-    const theme = {
+    const theme = useMemo(() => ({
         bg: darkMode ? '#1E293B' : '#fff',
         text: darkMode ? '#F8FAFC' : Colors.text,
         textMuted: darkMode ? '#94A3B8' : Colors.subText,
-        border: darkMode ? '#334155' : '#F1F5F9',
+        border: darkMode ? '#334155' : '#E2E8F0',
         input: darkMode ? '#334155' : '#F3F4F6',
-    };
+    }), [darkMode]);
+
+    const themedStyles = useMemo(() => StyleSheet.create({
+        postContainer: {
+            borderColor: theme.border,
+        },
+        postActionsRow: {
+            // Border is now handled by the bottom border of the meta row to match the HTML design perfectly
+        },
+        optionMenu: {
+            backgroundColor: theme.bg,
+            borderColor: theme.border,
+            borderWidth: darkMode ? 1 : 0,
+        }
+    }), [theme, darkMode]);
 
     const [userReaction, setUserReaction] = useState<ReactionType | null>(null);
     const [liked, setLiked] = useState(false);
@@ -227,7 +246,7 @@ const PostItem: React.FC<PostItemProps> = ({
 
     const handleSystemShare = async () => {
         try {
-            const result = await Share.share({
+            await Share.share({
                 message: `${post.user.name}: "${post.content}"\n\nChia sẻ từ ứng dụng Lịch học.`,
             });
         } catch (error: any) {
@@ -240,7 +259,6 @@ const PostItem: React.FC<PostItemProps> = ({
             label: 'Gửi qua tin nhắn',
             icon: 'send',
             onPress: () => {
-                // Placeholder for internal messaging
                 console.log('Send to message');
             }
         },
@@ -248,7 +266,6 @@ const PostItem: React.FC<PostItemProps> = ({
             label: 'Chia sẻ lên bảng tin',
             icon: 'rss-feed',
             onPress: () => {
-                // Placeholder for re-post
                 console.log('Share to feed');
             }
         },
@@ -256,7 +273,6 @@ const PostItem: React.FC<PostItemProps> = ({
             label: 'Sao chép liên kết',
             icon: 'link',
             onPress: () => {
-                // Since clipboard lib is missing, we can show a message or just log
                 console.log('Copy link clicked');
             }
         },
@@ -277,9 +293,18 @@ const PostItem: React.FC<PostItemProps> = ({
 
     return (
         <>
-            <View style={[styles.postContainer, { backgroundColor: theme.bg }]}>
+            <View style={[styles.postContainer, themedStyles.postContainer, { backgroundColor: theme.bg }]}>
                 <View style={styles.postHeader}>
-                    <Image source={{ uri: post.user?.avatar || '' }} style={styles.avatar} />
+                    {/* Glowing outer ring wrapper for avatar */}
+                    <View style={[styles.avatarWrapper, { borderColor: Colors.primary + '15' }]}>
+                        <Image
+                            source={{ uri: post.user?.avatar || 'https://via.placeholder.com/150' }}
+                            style={styles.avatar}
+                            contentFit="cover"
+                            transition={200}
+                            cachePolicy="memory-disk"
+                        />
+                    </View>
                     <View style={{ marginLeft: 4, flex: 1 }}>
                         <Text style={[styles.userName, { color: theme.text }]}>{post.user?.name}</Text>
                         <Text style={[styles.timestamp, { color: theme.textMuted }]}>{formatTimeAgo(post.timestamp!)}</Text>
@@ -294,43 +319,74 @@ const PostItem: React.FC<PostItemProps> = ({
                     </Pressable>
                 </View>
 
-                <Text style={[styles.postContent, { color: darkMode ? '#CBD5E1' : '#4B5563' }]}>{post.content}</Text>
+                {post.content ? (
+                    <Text style={[styles.postContent, { color: darkMode ? '#CBD5E1' : '#4B5563' }]}>
+                        {post.content}
+                    </Text>
+                ) : null}
 
-                {post.images && <PostImages images={post.images.map((img) => img.url) || []} />}
+                {post.images && post.images.length > 0 && (
+                    <PostImages
+                        images={post.images.map((img) => img.url) || []}
+                        hasText={!!post.content?.trim()}
+                    />
+                )}
 
-                {reactionSummary.total > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                        <View style={{ flexDirection: 'row' }}>
-                            {Object.entries(reactionSummary)
-                                .filter(([type, count]) => type !== 'total' && count > 0)
-                                .sort((a, b) => b[1] - a[1])
-                                .slice(0, 3)
-                                .map(([type], index) => (
-                                    <View
-                                        key={type}
-                                        style={{
-                                            marginLeft: index === 0 ? 0 : -6,
-                                        }}
-                                    >
-                                        <ReactionBadge type={type as ReactionType} size={18} />
-                                    </View>
-                                ))}
-                        </View>
+                {/* Meta Row: Reactions & Comments count */}
+                {(reactionSummary.total > 0 || countComments(comments) > 0) && (
+                    <View style={[styles.metaRow]}>
+                        {/* Left: Reactions */}
+                        {reactionSummary.total > 0 ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    {Object.entries(reactionSummary)
+                                        .filter(([type, count]) => type !== 'total' && (count as number) > 0)
+                                        .sort((a, b) => (b[1] as number) - (a[1] as number))
+                                        .slice(0, 3)
+                                        .map(([type, count], index) => (
+                                            <View
+                                                key={type}
+                                                style={[
+                                                    styles.miniBadgeWrapper,
+                                                    {
+                                                        marginLeft: index === 0 ? 0 : -4,
+                                                        zIndex: 3 - index,
+                                                        borderColor: theme.bg,
+                                                        backgroundColor: theme.bg,
+                                                    }
+                                                ]}
+                                            >
+                                                <ReactionBadge type={type as ReactionType} size={17} outlined={false} />
+                                            </View>
+                                        ))}
+                                </View>
+                                <Text style={[styles.metaText, { color: darkMode ? '#94A3B8' : '#5c5f61', marginLeft: 8 }]}>
+                                    {`${reactionSummary.total} lượt thích`}
+                                </Text>
+                            </View>
+                        ) : (
+                            <View />
+                        )}
 
-                        <Text style={{ fontSize: 13, color: theme.textMuted, marginLeft: 6 }}>
-                            {reactionSummary.total}
-                        </Text>
+                        {/* Right: Comments */}
+                        {countComments(comments) > 0 && (
+                            <Text style={[styles.metaText, { color: darkMode ? '#94A3B8' : '#5c5f61' }]}>
+                                {`${countComments(comments)} bình luận`}
+                            </Text>
+                        )}
                     </View>
                 )}
 
-                <View style={[styles.postActionsRow, { borderTopColor: theme.border }]}>
+                <View style={[styles.postActionsRow]}>
                     <View style={styles.postActionItem}>
                         <Pressable
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             delayLongPress={250}
                             style={({ pressed }) => [
                                 styles.postAction,
-                                { opacity: pressed ? 0.6 : 1 }
+                                {
+                                    transform: [{ scale: pressed ? 0.95 : 1 }]
+                                }
                             ]}
                             onPress={handleLike}
                             onLongPress={() => {
@@ -367,6 +423,7 @@ const PostItem: React.FC<PostItemProps> = ({
                                 ) : (
                                     <View style={styles.inactiveReactionWrap}>
                                         <ThumbsUp size={20} color={theme.textMuted} weight="regular" />
+                                        <Text style={[styles.postActionText, { color: theme.textMuted }]}>Thích</Text>
                                     </View>
                                 )}
                             </View>
@@ -374,35 +431,39 @@ const PostItem: React.FC<PostItemProps> = ({
                     </View>
 
                     <View style={styles.postActionItem}>
-                        <TouchableOpacity
-                            activeOpacity={0.5}
-                            style={styles.postAction}
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.postAction,
+                                {
+                                    transform: [{ scale: pressed ? 0.95 : 1 }]
+                                }
+                            ]}
                             onPress={handleCommentButton}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
                             <Ionicons name="chatbubble-outline" size={20} color={theme.textMuted} />
                             <Text style={[styles.postActionText, { color: theme.textMuted }]}>
-                                {countComments(comments) > 0 ? ` ${countComments(comments)}` : ''}
+                                Bình luận
                             </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     </View>
 
                     <View style={styles.postActionItem}>
-                        <TouchableOpacity
-                            activeOpacity={0.5}
-                            style={styles.postAction}
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.postAction
+                            ]}
                             onPress={handleShare}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
                             <Ionicons name="arrow-redo-outline" size={22} color={theme.textMuted} />
-                            <Text style={[styles.postActionText, { color: theme.textMuted }]}>
-                            </Text>
-                        </TouchableOpacity>
+                            <Text style={[styles.postActionText, { color: theme.textMuted }]}>Chia sẻ</Text>
+                        </Pressable>
                     </View>
                 </View>
 
                 {showComments && (
-                    <View style={{ paddingBottom: 16, borderTopWidth: 1, borderTopColor: theme.border }}>
+                    <View style={{ paddingBottom: 16 }}>
                         <PostCommentSection
                             ref={commentSectionRef}
                             postId={post.id}
@@ -418,18 +479,16 @@ const PostItem: React.FC<PostItemProps> = ({
                     <TouchableWithoutFeedback onPress={() => setShowOptions(false)}>
                         <View style={StyleSheet.absoluteFill} />
                     </TouchableWithoutFeedback>
-                    <View style={[styles.optionMenu, { backgroundColor: theme.bg, borderColor: theme.border, borderWidth: darkMode ? 1 : 0 }]}>
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            style={styles.optionItem}
+                    <View style={[styles.optionMenu, themedStyles.optionMenu]}>
+                        <Pressable
+                            style={({ pressed }) => [styles.optionItem, { backgroundColor: pressed ? (darkMode ? '#33415550' : '#F1F5F9') : 'transparent' }]}
                             onPress={handleEdit}
                         >
                             <Text style={[styles.optionText, { color: theme.text }]}>Sửa bài viết</Text>
-                        </TouchableOpacity>
+                        </Pressable>
 
-                        <TouchableOpacity
-                            activeOpacity={0.8}
-                            style={styles.optionItem}
+                        <Pressable
+                            style={({ pressed }) => [styles.optionItem, { backgroundColor: pressed ? '#EF444410' : 'transparent' }]}
                             onPress={() => {
                                 onDelete(post.id);
                                 setShowOptions(false);
@@ -438,7 +497,7 @@ const PostItem: React.FC<PostItemProps> = ({
                             <Text style={[styles.optionText, { color: '#EF4444' }]}>
                                 Xóa bài viết
                             </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     </View>
                 </View>
             )}
@@ -496,20 +555,20 @@ const styles = StyleSheet.create({
     optionMenu: {
         width: 150,
         borderRadius: 12,
+        borderCurve: 'continuous',
         paddingVertical: 6,
         shadowColor: '#000',
-        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
         shadowRadius: 10,
         elevation: 5,
-        borderWidth: 1,
     },
     optionItem: {
-        paddingVertical: 10,
-        paddingHorizontal: 14,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
     },
     optionText: {
         fontSize: 15,
-        color: '#333',
     },
     overlay: {
         position: 'absolute',
@@ -521,33 +580,46 @@ const styles = StyleSheet.create({
         zIndex: 1,
     },
     postContainer: {
-        backgroundColor: '#fff',
         padding: 16,
         paddingBottom: 0,
-        marginBottom: 16,
-        borderRadius: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        marginBottom: 4,
+        borderCurve: 'continuous',
+        borderWidth: 0.5,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.02,
+                shadowRadius: 12,
+            },
+            android: {
+                elevation: 0.2,
+            },
+        }),
     },
     postHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
     },
-    avatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+    avatarWrapper: {
+        borderRadius: 24,
+        borderCurve: 'continuous',
+        borderWidth: 1,
+        padding: 1.5,
         marginRight: 10,
+    },
+    avatar: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         backgroundColor: '#F1F5F9',
     },
     userName: {
         fontSize: 15,
-        fontWeight: 'bold',
+        fontWeight: '700',
         color: Colors.text,
+        letterSpacing: -0.2,
     },
     timestamp: {
         fontSize: 12,
@@ -557,16 +629,15 @@ const styles = StyleSheet.create({
     postContent: {
         fontSize: 15,
         lineHeight: 22,
-        color: '#334155',
         marginBottom: 4,
     },
     postActionsRow: {
         flexDirection: 'row',
-        marginTop: 10,
         marginHorizontal: -16,
         paddingHorizontal: 16,
+        // paddingVertical: 4,
         borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
+        borderTopColor: '#E2E8F0'
     },
     postActionItem: {
         flex: 1,
@@ -576,26 +647,50 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 12, // Tăng diện tích chạm theo chiều dọc
-        borderRadius: 12,
+        borderRadius: 10,
+        borderCurve: 'continuous',
+        gap: 6,
     },
     inactiveReactionWrap: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 6,
     },
     activeReactionWrap: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        gap: 6,
     },
     postActionText: {
-        marginLeft: 6,
         fontSize: 13,
-        color: '#64748B',
         fontWeight: '600',
     },
     activeReactionText: {
         fontWeight: '700',
+    },
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginHorizontal: -16,
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        paddingTop: 10,
+    },
+    metaText: {
+        fontSize: 12,
+        fontWeight: '400',
+    },
+    miniBadgeWrapper: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        borderWidth: 1.5,
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
     },
 });
 

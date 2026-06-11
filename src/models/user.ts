@@ -10,15 +10,18 @@ export interface UserModel {
   lastOnline?: string | null;
   lat?: number | null;
   lng?: number | null;
-  fcmToken?: string | null;
-}
-
-
-export interface UserPresenceModel {
-  studentId: string;
-  lastOnline?: string | null;
   isOnline: boolean;
   onlineStatusText: string;
+
+  work?: string | null;
+  education?: string[] | null;
+  currentCity?: string | null;
+  hometown?: string | null;
+  relationship?: string | null;
+  socialLink?: string | null;
+  showFollowers?: boolean | null;
+  stories?: any[];
+  note?: string | null;
 }
 
 export interface UserProfileModel {
@@ -34,6 +37,15 @@ export interface UserProfileModel {
   posts: number;
   lat?: number | null;
   lng?: number | null;
+  work?: string | null;
+  education?: string[] | null;
+  currentCity?: string | null;
+  hometown?: string | null;
+  relationship?: string | null;
+  socialLink?: string | null;
+  showFollowers?: boolean | null;
+  stories?: any[];
+  note?: string | null;
 }
 
 export interface UploadAvatarResult {

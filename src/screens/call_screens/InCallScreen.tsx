@@ -14,8 +14,32 @@ import {
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ChannelProfileType, ClientRoleType, createAgoraRtcEngine, IRtcEngine, RtcSurfaceView, RtcTextureView, RenderModeType, VideoMirrorModeType, VideoCodecType, OrientationMode, DegradationPreference, VideoContentHint } from "react-native-agora";
-import Icon from "react-native-vector-icons/MaterialIcons";
+
+// Conditional import for Agora to prevent crash in Expo Go
+// IMPORT QUAN TRỌNG: Comment dòng dưới khi chạy trên Expo Go, bỏ comment khi build Native thật
+// import * as AgoraNative from "react-native-agora"; 
+import * as AgoraMock from "../../utils/agora-mock";
+
+const isExpoGo = true; 
+const Agora = AgoraMock; // Luôn dùng Mock trên Expo Go
+
+const { 
+  ChannelProfileType, 
+  ClientRoleType, 
+  createAgoraRtcEngine, 
+  RtcSurfaceView, 
+  RtcTextureView, 
+  RenderModeType, 
+  VideoMirrorModeType, 
+  VideoCodecType, 
+  OrientationMode, 
+  DegradationPreference 
+} = Agora;
+
+// Define IRtcEngine type locally to avoid dependency issues
+type IRtcEngine = any;
+
+import { MaterialIcons as Icon } from "@expo/vector-icons";
 import { Colors } from "../../utils/theme";
 import { endCall, listenCall, updateDurationCall } from "../../services/callService";
 import { AGORA_APP_ID } from "../../configs/config";

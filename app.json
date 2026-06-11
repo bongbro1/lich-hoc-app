@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon1.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -66,8 +66,7 @@
             "useFrameworks": "static"
           }
         }
-      ],
-      "@react-native-firebase/app"
+      ]
     ],
     "extra": {
       "eas": {

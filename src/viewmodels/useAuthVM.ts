@@ -20,7 +20,7 @@ type LoginResult = {
     error?: string;
 };
 
-import auth from '@react-native-firebase/auth';
+import { auth } from '../configs/firebase';
 import { useLoading } from 'contexts/LoadingContext';
 
 export const useAuthVM = () => {
@@ -77,7 +77,7 @@ export const useAuthVM = () => {
 
                 const { user, data } = loginResponse;
 
-                console.log('firebase current user = ', auth().currentUser);
+                console.log('firebase current user = ', auth.currentUser);
 
                 // 2. Upsert user lên Firebase
                 await userRepo.addUserIfNotExists({

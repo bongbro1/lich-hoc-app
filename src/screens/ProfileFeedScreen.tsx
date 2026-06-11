@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, KeyboardAvoidingView, useWindowDimensions, Platform, Dimensions } from 'react-native';
 import SimpleHeader from '../components/SimpleHeader';
 import { ProfileFeedScreenProps } from '../types/typesSocial';
@@ -9,22 +9,25 @@ import { useUser } from '../contexts/UserContext';
 import { calculateNumColumns } from '../components/ImageFullModal';
 import { useImageFullModal } from '../contexts/ImageFullModalContext';
 import BottomActionSheet from '../components/BottomActionSheet';
+import { SCREENS } from '../configs/constants';
 
 // Import extracted components and logic
 import ProfileTabButton from '../components/profile/ProfileTabButton';
-import ProfileFeedSkeleton from '../components/profile/ProfileFeedSkeleton';
+import ProfileFeedSkeleton, { PostItemsSkeleton } from '../components/profile/ProfileFeedSkeleton';
 import ProfileHeader from '../components/profile/ProfileHeader';
 import CreatePostSection from '../components/profile/CreatePostSection';
+import ProfileBioSection from '../components/profile/ProfileBioSection';
+import ProfileFriendsSection from '../components/profile/ProfileFriendsSection';
 import { useProfileFeedLogic } from '../hooks/useProfileFeedLogic';
 
 export default function ProfileFeedScreen({ route, navigation }: ProfileFeedScreenProps) {
     const { darkMode } = useUser();
     const { openModal } = useImageFullModal();
     const p = route.params ?? {};
-    const { studentId } = p;
+    const { studentId, initialProfile } = p;
 
     // Use our custom logic hook
-    const logic = useProfileFeedLogic(studentId, navigation);
+    const logic = useProfileFeedLogic(studentId, navigation, initialProfile);
 
     // Calculate dimensions for images
     const windowWidth = useWindowDimensions().width - 40;
@@ -40,19 +43,76 @@ export default function ProfileFeedScreen({ route, navigation }: ProfileFeedScre
     });
     const imageSize = (windowWidth - containerPadding * 2 - spacing * (numColumns - 1)) / numColumns;
 
-    const theme = {
-        bg: darkMode ? '#0F172A' : '#F5F7FB',
+    const theme = useMemo(() => ({
+        bg: darkMode ? '#0F172A' : '#F0F2F5',
         card: darkMode ? '#1E293B' : '#fff',
         text: darkMode ? '#F8FAFC' : Colors.text,
         textMuted: darkMode ? '#94A3B8' : Colors.subText,
-        border: darkMode ? '#334155' : '#F1F5F9',
-        divider: darkMode ? '#334155' : '#eee',
+        border: darkMode ? '#334155' : '#E2E8F0',
+        divider: darkMode ? '#334155' : '#E2E8F0',
         input: darkMode ? '#334155' : '#f5f5f5',
-    };
+    }), [darkMode]);
+
+    const themedStyles = useMemo(() => StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: theme.bg,
+        },
+        keyboardAvoiding: {
+            flex: 1,
+            backgroundColor: theme.bg,
+        },
+        emptyContainer: {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+            borderWidth: 0.5,
+        },
+        tabRow: {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+            borderBottomColor: theme.border,
+            borderBottomWidth: 0.5,
+        }
+    }), [theme]);
+
+    const renderItem = useCallback(({ item, index }: { item: any; index: number }) => (
+        <PostItem
+            post={item}
+            itemIndex={index}
+            onDelete={logic.handleDeletePost}
+            onComposerFocus={logic.handleComposerFocus}
+            onRequestCommentFocus={logic.handleRequestCommentFocus}
+            refreshTrigger={logic.refreshTrigger}
+        />
+    ), [logic.handleDeletePost, logic.handleComposerFocus, logic.handleRequestCommentFocus, logic.refreshTrigger]);
+
+    const renderEmpty = useCallback(() => {
+        if (logic.loadingPosts) {
+            return <PostItemsSkeleton />;
+        }
+        return (
+            <View style={[styles.emptyContainer, themedStyles.emptyContainer]}>
+                <View style={[styles.emptyIconCircle, { backgroundColor: darkMode ? '#334155' : '#F8FAFC' }]}>
+                    <Ionicons name="newspaper-outline" size={48} color={theme.textMuted} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>Chưa có bài viết nào</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
+                    {logic.isCurrentUser
+                        ? "Hãy chia sẻ những khoảnh khắc hoặc suy nghĩ của bạn với mọi người nhé!"
+                        : "Người dùng này hiện chưa có bài viết công khai nào."}
+                </Text>
+            </View>
+        );
+    }, [theme, darkMode, logic.isCurrentUser, logic.loadingPosts, themedStyles.emptyContainer]);
+
+    const handleFilterAll = useCallback(() => logic.setActiveFilter("all"), [logic.setActiveFilter]);
+    const handleFilterPhotos = useCallback(() => logic.setActiveFilter("photos"), [logic.setActiveFilter]);
+    const handleFilterPosts = useCallback(() => logic.setActiveFilter("posts"), [logic.setActiveFilter]);
+    const handleShowOptions = useCallback(() => logic.setShowOptions(true), [logic.setShowOptions]);
 
     if (logic.loadingPage) {
         return (
-            <View style={{ flex: 1, backgroundColor: theme.bg }}>
+            <View style={themedStyles.container}>
                 <SimpleHeader title="Trang cá nhân" loading={true} />
                 <ProfileFeedSkeleton isCurrentUser={logic.isCurrentUser} displayStatus={logic.displayStatus} />
             </View>
@@ -61,37 +121,28 @@ export default function ProfileFeedScreen({ route, navigation }: ProfileFeedScre
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1, backgroundColor: theme.bg }}
+            style={themedStyles.keyboardAvoiding}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={-20}
         >
             <SimpleHeader
                 title={logic.profile?.name || "Trang cá nhân"}
                 loading={false}
-                onPressOptions={!logic.isCurrentUser ? () => logic.setShowOptions(true) : undefined}
+                onPressOptions={!logic.isCurrentUser ? handleShowOptions : undefined}
             />
 
             <FlatList
                 ref={logic.flatListRef}
-                style={[styles.container, { backgroundColor: theme.bg }]}
+                style={[styles.container, themedStyles.container]}
                 data={logic.posts}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item, index }) => (
-                    <PostItem
-                        post={item}
-                        itemIndex={index}
-                        onDelete={() => logic.handleDeletePost(item.id)}
-                        onComposerFocus={logic.handleComposerFocus}
-                        onRequestCommentFocus={logic.handleRequestCommentFocus}
-                        refreshTrigger={logic.refreshTrigger}
-                    />
-                )}
+                renderItem={renderItem}
                 refreshing={logic.refreshing}
                 onRefresh={logic.onRefresh}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="none"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 24 }}
+                contentContainerStyle={{ paddingBottom: 32 }}
                 onScroll={(event) => {
                     logic.scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
                 }}
@@ -112,6 +163,7 @@ export default function ProfileFeedScreen({ route, navigation }: ProfileFeedScre
                 }}
                 ListHeaderComponent={
                     <View>
+                        {/* ── Profile Header (Cover + Avatar + Name + Actions) ── */}
                         <ProfileHeader
                             isCurrentUser={logic.isCurrentUser}
                             studentName={logic.profile?.name}
@@ -132,10 +184,40 @@ export default function ProfileFeedScreen({ route, navigation }: ProfileFeedScre
                             handleRejectFriend={logic.handleRejectFriend}
                             handleFriendPress={logic.handleFriendPress}
                             handleMessages={logic.handleMessages}
-                            handleShowOptions={() => logic.setShowOptions(true)}
+                            handleShowOptions={handleShowOptions}
                             handleAddFriend={logic.handleAddFriend}
+                            handleAddStory={() => navigation.navigate(SCREENS.CREATE_STORY)}
+                            handleDeleteStory={logic.handleDeleteStory}
+                            stories={logic.stories}
                         />
 
+                        {/* ── Bio / Giới thiệu Section ── */}
+                        <ProfileBioSection
+                            theme={theme}
+                            darkMode={darkMode}
+                            followersCount={logic.followersCount}
+                            isCurrentUser={logic.isCurrentUser}
+                            profile={logic.profile}
+                            onEditPress={() => {
+                                navigation.navigate(SCREENS.EDIT_PROFILE_DETAILS, {
+                                    studentId: logic.profile?.studentId,
+                                    initialProfile: logic.profile
+                                });
+                            }}
+                        />
+
+                        {/* ── Friends / Bạn bè Section ── */}
+                        <ProfileFriendsSection
+                            theme={theme}
+                            darkMode={darkMode}
+                            friendsCount={logic.friendsCount}
+                            isCurrentUser={logic.isCurrentUser}
+                            friends={logic.friendsList}
+                            onViewAll={logic.handleViewAllFriends}
+                            onPressFriend={logic.handleGoToUserProfile}
+                        />
+
+                        {/* ── Create Post (only for current user) ── */}
                         {logic.isCurrentUser && (
                             <CreatePostSection
                                 theme={theme}
@@ -150,41 +232,31 @@ export default function ProfileFeedScreen({ route, navigation }: ProfileFeedScre
                                 handlePickImage={logic.handlePickImage}
                                 handleAddPost={logic.handleAddPost}
                                 submitting={logic.submitting}
+                                avatarUri={logic.avatarUri}
                             />
                         )}
 
-                        <View style={[styles.tabRow, { backgroundColor: theme.card, borderBottomColor: theme.divider }]}>
+                        {/* ── Posts Tab Bar ── */}
+                        <View style={[styles.tabRow, themedStyles.tabRow]}>
                             <ProfileTabButton
-                                label="Tất cả"
+                                label="Bài viết"
                                 active={logic.activeFilter === "all"}
-                                onPress={() => logic.setActiveFilter("all")}
+                                onPress={handleFilterAll}
                             />
                             <ProfileTabButton
                                 label="Ảnh"
                                 active={logic.activeFilter === "photos"}
-                                onPress={() => logic.setActiveFilter("photos")}
+                                onPress={handleFilterPhotos}
                             />
                             <ProfileTabButton
-                                label="Bài viết"
+                                label="Reels"
                                 active={logic.activeFilter === "posts"}
-                                onPress={() => logic.setActiveFilter("posts")}
+                                onPress={handleFilterPosts}
                             />
                         </View>
                     </View>
                 }
-                ListEmptyComponent={() => (
-                    <View style={[styles.emptyContainer, { backgroundColor: theme.card }]}>
-                        <View style={[styles.emptyIconCircle, { backgroundColor: darkMode ? '#334155' : '#F8FAFC' }]}>
-                            <Ionicons name="newspaper-outline" size={48} color={theme.textMuted} />
-                        </View>
-                        <Text style={[styles.emptyTitle, { color: theme.text }]}>Chưa có bài viết nào</Text>
-                        <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
-                            {logic.isCurrentUser
-                                ? "Hãy chia sẻ những khoảnh khắc hoặc suy nghĩ của bạn với mọi người nhé!"
-                                : "Người dùng này hiện chưa có bài viết công khai nào."}
-                        </Text>
-                    </View>
-                )}
+                ListEmptyComponent={renderEmpty}
             />
 
             <BottomActionSheet
@@ -200,18 +272,17 @@ export default function ProfileFeedScreen({ route, navigation }: ProfileFeedScre
 const styles = StyleSheet.create({
     container: { flex: 1 },
     tabRow: {
-        flexDirection: "row",
-        borderBottomWidth: 1,
-        marginBottom: 12,
-        borderRadius: 12,
-        overflow: 'hidden',
+        flexDirection: 'row',
+        borderBottomWidth: 0.5,
     },
     emptyContainer: {
         padding: 40,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 16,
+        borderRadius: 12,
+        borderCurve: 'continuous',
         marginTop: 8,
+        marginHorizontal: 16,
     },
     emptyIconCircle: {
         width: 100,

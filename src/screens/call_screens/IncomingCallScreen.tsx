@@ -10,12 +10,11 @@ import {
     SafeAreaView,
     Alert,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, MaterialIcons as Icon } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import * as ImagePicker from 'expo-image-picker';
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
-import Icon from "react-native-vector-icons/MaterialIcons";
 import { Colors } from "../../utils/theme";
 import { acceptCall, endCall, listenCall } from "../../services/callService";
 import { CallUser } from "../../types/typesChat";

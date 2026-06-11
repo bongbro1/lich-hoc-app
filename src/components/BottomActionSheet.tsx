@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Modal,
   View,
   Text,
   Pressable,
@@ -15,6 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../utils/theme";
 import { useUser } from "contexts/UserContext";
+import { Portal } from "react-native-paper";
 
 const { height } = Dimensions.get("window");
 
@@ -41,42 +41,57 @@ export default function BottomActionSheet({
   children,
 }: BottomActionSheetProps) {
   const insets = useSafeAreaInsets();
+  const [prevVisible, setPrevVisible] = useState(visible);
   const [showModal, setShowModal] = useState(visible);
 
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (visible) {
+      setShowModal(true);
+    }
+  }
+
   // Animation values
-  const translateY = useRef(new Animated.Value(height)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(visible ? 0 : 360)).current;
+  const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
 
   useEffect(() => {
     if (visible) {
-      setShowModal(true);
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 65,
-          friction: 11,
-        }),
-      ]).start();
+      translateY.setValue(360);
+      opacity.setValue(0);
+      requestAnimationFrame(() => {
+        Animated.parallel([
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 180,
+            useNativeDriver: true,
+          }),
+          Animated.timing(translateY, {
+            toValue: 0,
+            duration: 180,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
     } else {
       Animated.parallel([
         Animated.timing(opacity, {
           toValue: 0,
-          duration: 250,
+          duration: 150,
           useNativeDriver: true,
         }),
         Animated.timing(translateY, {
-          toValue: height,
-          duration: 250,
-          easing: Easing.out(Easing.ease),
+          toValue: 360,
+          duration: 150,
+          easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
-      ]).start(() => setShowModal(false));
+      ]).start(({ finished }) => {
+        if (finished) {
+          setShowModal(false);
+        }
+      });
     }
   }, [visible]);
 
@@ -90,20 +105,14 @@ export default function BottomActionSheet({
     text: darkMode ? '#F8FAFC' : '#1E293B',
     textMuted: darkMode ? '#94A3B8' : '#64748B',
     border: darkMode ? '#334155' : '#F1F5F9',
-    itemBg: darkMode ? '#334155' : '#F8FAFC',
+    itemBg: darkMode ? '#0F172A' : '#F5F7FB', // Matched with HomeScreen bg
     handle: darkMode ? '#475569' : '#E2E8F0',
   };
 
   if (!showModal && !visible) return null;
 
   return (
-    <Modal
-      transparent
-      visible={showModal}
-      onRequestClose={handleClose}
-      statusBarTranslucent
-      animationType="none"
-    >
+    <Portal>
       <View style={styles.container}>
         {/* Backdrop */}
         <Animated.View
@@ -168,7 +177,7 @@ export default function BottomActionSheet({
                   {action.label}
                 </Text>
 
-                <MaterialIcons name="chevron-right" size={16} color={theme.textMuted} />
+                <MaterialIcons name="chevron-right" size={18} color={theme.textMuted} />
               </TouchableOpacity>
             ))}
           </View>
@@ -177,19 +186,19 @@ export default function BottomActionSheet({
           <TouchableOpacity
             onPress={handleClose}
             activeOpacity={0.8}
-            style={styles.closeButton}
+            style={[styles.closeButton, { backgroundColor: darkMode ? '#334155' : '#FEF2F2' }]}
           >
-            <Text style={[styles.closeText, { color: '#EF4444' }]}>Đóng</Text>
+            <Text style={[styles.closeText, { color: darkMode ? '#F8FAFC' : '#EF4444' }]}>Đóng</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </Modal>
+    </Portal>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
   },
   backdrop: {
@@ -197,6 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15, 23, 42, 0.4)",
   },
   sheet: {
+    paddingTop: 10,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 16,
@@ -208,7 +218,7 @@ const styles = StyleSheet.create({
   },
   handleContainer: {
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 4,
   },
   handle: {
@@ -217,26 +227,26 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   header: {
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     alignItems: 'center',
     marginBottom: 6,
   },
   title: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: 'uppercase',
     letterSpacing: 1.5,
   },
   content: {
-    marginBottom: 10,
+    marginBottom: 6,
   },
   actionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 16,
+    borderRadius: 14,
     marginBottom: 6,
   },
   iconCircle: {
@@ -249,17 +259,16 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
   closeButton: {
     width: "100%",
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 0,
-    marginTop: 2,
-    backgroundColor: '#FEF2F2',
+    marginTop: 0,
   },
   closeText: {
     fontSize: 14,

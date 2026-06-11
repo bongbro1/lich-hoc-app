@@ -4,7 +4,6 @@ import {
     Alert,
     AppState,
     FlatList,
-    Image,
     Keyboard,
     KeyboardAvoidingView,
     Platform,
@@ -16,9 +15,9 @@ import {
     View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Image } from 'expo-image';
 import { Audio } from 'expo-av';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons as Icon } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -66,7 +65,7 @@ const MessageItem = React.memo(({
                 ]}
             >
                 {!isSender && (
-                    <Image source={{ uri: partnerUser.avatar ?? '' }} style={styles.avatarSmall} />
+                    <Image source={{ uri: partnerUser.avatar ?? '' }} style={styles.avatarSmall} cachePolicy="memory-disk" />
                 )}
 
                 {item.messageType === 'text' && (
@@ -428,6 +427,9 @@ export const ChatDetailScreen = ({ route, navigation }: ChatDetailScreenProps) =
                                         ? styles.messageImageMulti
                                         : styles.messageImageSingle,
                                 ]}
+                                contentFit="cover"
+                                transition={200}
+                                cachePolicy="memory-disk"
                             />
                         </TouchableOpacity>
                     ))}
@@ -471,7 +473,7 @@ export const ChatDetailScreen = ({ route, navigation }: ChatDetailScreenProps) =
             keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
         >
             <View style={[styles.screen, { backgroundColor: theme.bg }]}>
-                <View style={[styles.header, { paddingTop: insets.top + 8, backgroundColor: theme.header }]}>
+                <View style={[styles.header, { paddingTop: insets.top, height: 50 + insets.top, backgroundColor: theme.header }]}>
                     <TouchableOpacity
                         activeOpacity={0.8}
                         onPress={() => navigation.goBack()}
@@ -488,6 +490,7 @@ export const ChatDetailScreen = ({ route, navigation }: ChatDetailScreenProps) =
                         <Image
                             source={{ uri: partnerUser.avatar ?? '' }}
                             style={styles.avatar}
+                            cachePolicy="memory-disk"
                         />
 
                         <View>
@@ -560,7 +563,7 @@ export const ChatDetailScreen = ({ route, navigation }: ChatDetailScreenProps) =
                         >
                             {selectedImages.map((uri, index) => (
                                 <View key={`${uri}-${index}`} style={[styles.previewItem, { backgroundColor: theme.input }]}>
-                                    <Image source={{ uri }} style={styles.previewImage} />
+                                    <Image source={{ uri }} style={styles.previewImage} contentFit="cover" cachePolicy="memory-disk" />
                                     <TouchableOpacity
                                         style={styles.previewRemoveButton}
                                         onPress={() => handleRemoveSelectedImage(uri)}
@@ -877,9 +880,8 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primary,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
+        paddingHorizontal: 8,
         justifyContent: 'flex-start',
-        paddingBottom: 14,
         borderBottomColor: '#c0d4ff',
         shadowColor: '#000',
         shadowOpacity: 0.15,
@@ -899,13 +901,13 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        marginLeft: 8,
     },
     userName: {
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 16,
         marginLeft: 8,
+        paddingTop: 4,
         flex: 1,
     },
     onlineText: {

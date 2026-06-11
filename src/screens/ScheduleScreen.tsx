@@ -70,13 +70,14 @@ export default function ScheduleScreen() {
     }, []);
 
     const theme = {
-        bg: darkMode ? '#0F172A' : '#F8FAFC',
+        bg: darkMode ? '#0F172A' : '#F5F7FB',
         card: darkMode ? '#1E293B' : '#FFFFFF',
         text: darkMode ? '#F8FAFC' : '#1E293B',
         textMuted: darkMode ? '#94A3B8' : '#64748B',
         border: darkMode ? '#334155' : '#E2E8F0',
         header: darkMode ? '#334155' : '#F1F5F9',
         accent: Colors.primary,
+        subAccent: `${Colors.primary}15`,
     };
 
     const nowMinutes = useMemo(() => {
@@ -89,29 +90,31 @@ export default function ScheduleScreen() {
         return h * 60 + m;
     };
 
-    const renderItem = ({ item, index }: { item: ScheduleItem, index: number }) => {
+    const renderItem = ({ item }: { item: ScheduleItem }) => {
         const isCurrent = nowMinutes >= timeToMinutes(item.start) && nowMinutes <= timeToMinutes(item.end);
 
         return (
             <View style={[
-                styles.row,
-                { borderBottomColor: theme.border },
-                isCurrent && { backgroundColor: `${theme.accent}15` }
+                styles.card,
+                { backgroundColor: theme.card, borderColor: theme.border },
+                isCurrent && [styles.activeCard, { borderColor: theme.accent }]
             ]}>
-                <View style={[styles.cell, styles.periodCell, { borderRightColor: theme.border }]}>
-                    <Text style={[styles.cellText, { color: isCurrent ? theme.accent : theme.text, fontWeight: isCurrent ? '800' : '500' }]}>
+                <View style={[styles.periodBadge, { backgroundColor: isCurrent ? theme.accent : theme.header }]}>
+                    <Text style={[styles.periodText, { color: isCurrent ? '#FFF' : theme.textMuted }]}>
                         {item.period}
                     </Text>
                 </View>
-                <View style={[styles.cell, { borderRightColor: theme.border }]}>
-                    <Text style={[styles.cellText, { color: isCurrent ? theme.accent : theme.text, fontWeight: isCurrent ? '700' : '400' }]}>
-                        {item.start}
-                    </Text>
-                </View>
-                <View style={styles.cell}>
-                    <Text style={[styles.cellText, { color: isCurrent ? theme.accent : theme.text, fontWeight: isCurrent ? '700' : '400' }]}>
-                        {item.end}
-                    </Text>
+
+                <View style={styles.timeInfo}>
+                    <View style={styles.timeBlock}>
+                        <Text style={[styles.timeLabel, { color: theme.textMuted }]}>Bắt đầu</Text>
+                        <Text style={[styles.timeValue, { color: isCurrent ? theme.accent : theme.text }]}>{item.start}</Text>
+                    </View>
+                    <View style={[styles.timeDivider, { backgroundColor: theme.border }]} />
+                    <View style={styles.timeBlock}>
+                        <Text style={[styles.timeLabel, { color: theme.textMuted }]}>Kết thúc</Text>
+                        <Text style={[styles.timeValue, { color: isCurrent ? theme.accent : theme.text }]}>{item.end}</Text>
+                    </View>
                 </View>
             </View>
         );
@@ -121,75 +124,95 @@ export default function ScheduleScreen() {
         <View style={{ flex: 1, backgroundColor: theme.bg }}>
             <SimpleHeader title="Thời gian biểu" />
 
-            <View style={styles.container}>
-                <View style={[styles.tableContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                    {/* Header Row */}
-                    <View style={[styles.row, styles.headerRow, { backgroundColor: theme.header, borderBottomColor: theme.border }]}>
-                        <View style={[styles.cell, styles.periodCell, { borderRightColor: theme.border }]}>
-                            <Text style={[styles.headerText, { color: theme.textMuted }]}>Tiết</Text>
-                        </View>
-                        <View style={[styles.cell, { borderRightColor: theme.border }]}>
-                            <Text style={[styles.headerText, { color: theme.textMuted }]}>Giờ vào</Text>
-                        </View>
-                        <View style={styles.cell}>
-                            <Text style={[styles.headerText, { color: theme.textMuted }]}>Giờ ra</Text>
-                        </View>
+            <FlatList
+                data={scheduleData}
+                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                contentContainerStyle={styles.listContainer}
+                showsVerticalScrollIndicator={false}
+                ListHeaderComponent={() => (
+                    <View style={styles.listHeader}>
+                        <Text style={[styles.listSubtitle, { color: theme.textMuted }]}>
+                            Danh sách tiết học trong ngày
+                        </Text>
                     </View>
-
-                    {/* Data List */}
-                    <FlatList
-                        data={scheduleData}
-                        keyExtractor={(item) => item.id}
-                        renderItem={renderItem}
-                        showsVerticalScrollIndicator={false}
-                    />
-                </View>
-            </View>
+                )}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-        paddingTop: 20,
+    listContainer: {
+        padding: 12,
+        paddingBottom: 32,
     },
-    tableContainer: {
-        flex: 1,
-        borderRadius: 12,
-        borderWidth: 1,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+    listHeader: {
+        marginBottom: 12,
     },
-    row: {
+    listSubtitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    card: {
         flexDirection: 'row',
-        borderBottomWidth: 1,
+        alignItems: 'center',
+        borderRadius: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        marginBottom: 8,
+        borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 1,
     },
-    headerRow: {
-        paddingVertical: 12,
+    activeCard: {
+        borderWidth: 1.5,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+        transform: [{ scale: 1.01 }],
     },
-    cell: {
-        flex: 1,
-        paddingVertical: 15,
+    periodBadge: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRightWidth: 1,
+        marginRight: 12,
     },
-    periodCell: {
-        flex: 0.7,
-    },
-    headerText: {
-        fontSize: 12,
-        fontWeight: '800',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    cellText: {
+    periodText: {
         fontSize: 15,
+        fontWeight: '800',
+    },
+    timeInfo: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    timeBlock: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    timeLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        marginBottom: 0,
+    },
+    timeValue: {
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    timeDivider: {
+        width: 1,
+        height: 20,
+        marginHorizontal: 12,
     },
 });

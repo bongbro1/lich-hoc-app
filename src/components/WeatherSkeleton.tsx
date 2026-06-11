@@ -15,6 +15,7 @@ export default function WeatherSkeleton() {
     const theme = {
         bg: darkMode ? '#0F172A' : '#F8FAFC',
         card: darkMode ? '#1E293B' : '#FFFFFF',
+        border: darkMode ? '#334155' : '#E2E8F0',
         primary: Colors.primary,
         gradient: darkMode ? ['#1E293B', '#0F172A'] : [Colors.primary, '#6366F1'],
     };
@@ -60,7 +61,7 @@ export default function WeatherSkeleton() {
                     <Skeleton width={150} height={24} radius={12} />
                 </View>
 
-                <View style={[styles.forecastCard, { backgroundColor: theme.card }]}>
+                <View style={[styles.forecastCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                     {[1, 2, 3, 4].map((i) => (
                         <View key={i} style={styles.forecastItem}>
                             <Skeleton width={30} height={12} radius={6} style={{ marginBottom: 8 }} />
@@ -74,12 +75,12 @@ export default function WeatherSkeleton() {
                     <Skeleton width={150} height={24} radius={12} />
                 </View>
 
-                <View style={[styles.weeklyCard, { backgroundColor: theme.card }]}>
+                <View style={[styles.weeklyCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                     {[1, 2, 3].map((i) => (
-                        <View key={i} style={styles.weeklyItem}>
-                            <Skeleton width={80} height={20} radius={10} />
-                            <Skeleton width={100} height={20} radius={10} />
-                            <Skeleton width={60} height={20} radius={10} />
+                        <View key={i} style={[styles.weeklyItem, i !== 3 && { borderBottomWidth: 0.5, borderBottomColor: theme.border }]}>
+                            <Skeleton width={80} height={16} radius={8} />
+                            <Skeleton width={100} height={16} radius={8} />
+                            <Skeleton width={60} height={16} radius={8} />
                         </View>
                     ))}
                 </View>
@@ -126,7 +127,9 @@ const styles = StyleSheet.create({
     forecastCard: {
         flexDirection: 'row',
         padding: 16,
-        borderRadius: 20,
+        borderRadius: 12,
+        borderCurve: 'continuous',
+        borderWidth: 0.5,
         marginBottom: 24,
         ...Platform.select({
             ios: {
@@ -145,7 +148,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     weeklyCard: {
-        borderRadius: 20,
+        borderRadius: 12,
+        borderCurve: 'continuous',
+        borderWidth: 0.5,
         padding: 8,
         marginBottom: 24,
         ...Platform.select({

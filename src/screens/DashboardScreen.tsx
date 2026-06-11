@@ -27,6 +27,7 @@ import {
 import storageService, { STORAGE_KEYS } from '../services/storageService';
 import { SCREENS } from '../configs/constants';
 import { MaterialIcons } from '@expo/vector-icons';
+import SimpleHeader from 'components/SimpleHeader';
 
 type DashboardProps = {
     navigation: any;
@@ -41,21 +42,6 @@ type MenuItem = {
 export default function DashboardScreen({ navigation }: DashboardProps) {
     const { user, darkMode } = useUser();
     const insets = useSafeAreaInsets();
-    const [stats, setStats] = useState({ gpa: '—', credits: '—' });
-
-    useEffect(() => {
-        const loadStats = async () => {
-            const marks = await storageService.get({ key: STORAGE_KEYS.STUDENT_MARKS });
-            if (marks && marks.studentInfo) {
-                setStats({
-                    gpa: marks.studentInfo.dtbTLHS4 || '—',
-                    credits: marks.studentInfo.totalCredits || '—',
-                });
-            }
-        };
-        loadStats();
-    }, []);
-
     const menuItems: MenuItem[] = [
         { label: "Lịch học", screen: SCREENS.SCHEDULE, icon: Clock },
         { label: "Điểm số", screen: SCREENS.GRADES, icon: GraduationCap },
@@ -77,13 +63,6 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
 
     if (!user) return null;
 
-    const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return 'Chào buổi sáng';
-        if (hour < 18) return 'Chào buổi chiều';
-        return 'Chào buổi tối';
-    };
-
     return (
         <View style={[styles.mainContainer, { backgroundColor: theme.bg }]}>
             <StatusBar barStyle="light-content" />
@@ -92,35 +71,17 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
             >
-                {/* Header Section */}
-                <LinearGradient
-                    colors={[theme.headerBg, theme.headerBg] as any}
-                    style={[styles.header, { paddingTop: insets.top + 16 }]}
-                >
-                    <View style={styles.headerTop}>
-                        <View>
-                            <Text style={styles.greetingText}>{getGreeting()} 👋</Text>
-                            <Text style={styles.userNameText}>{user.name}</Text>
-                        </View>
-                        <Pressable 
-                            style={({ pressed }) => [styles.notifBtn, pressed && { opacity: 0.7 }]}
-                        >
-                            <Bell size={24} color="#FFF" weight="fill" />
-                            <View style={styles.notifBadge} />
-                        </Pressable>
-                    </View>
-                </LinearGradient>
+                <SimpleHeader title="Bảng điều khiển" showBackButton={false} />
 
                 <View style={styles.contentBody}>
                     {/* Profile Link Card */}
                     <Pressable
                         onPress={() => navigation.navigate(SCREENS.PROFILE_FEED, { studentId: user.studentId })}
-                        style={({ pressed }) => [
+                        style={[
                             styles.profileCard,
-                            { 
-                                backgroundColor: theme.card, 
+                            {
+                                backgroundColor: theme.card,
                                 borderColor: theme.border,
-                                transform: [{ scale: pressed ? 0.98 : 1 }]
                             }
                         ]}
                     >
@@ -147,8 +108,8 @@ export default function DashboardScreen({ navigation }: DashboardProps) {
                                 key={index}
                                 style={({ pressed }) => [
                                     styles.menuCard,
-                                    { 
-                                        backgroundColor: theme.card, 
+                                    {
+                                        backgroundColor: theme.card,
                                         borderColor: theme.border,
                                         transform: [{ scale: pressed ? 0.96 : 1 }]
                                     }
@@ -176,7 +137,7 @@ const styles = StyleSheet.create({
         // paddingBottom is dynamic now based on insets
     },
     header: {
-        paddingBottom: 24,
+        paddingBottom: 14,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
@@ -231,27 +192,15 @@ const styles = StyleSheet.create({
         borderColor: '#FFF',
     },
     contentBody: {
-        paddingHorizontal: 16,
+        padding: 16,
     },
     profileCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: 20,
+        borderRadius: 12,
         padding: 16,
         marginBottom: 24,
-        borderWidth: 1,
-        // Human-made native shadow
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.03,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 1,
-            },
-        }),
+        borderWidth: 1.2,
     },
     avatarWrapper: {
         position: 'relative',
@@ -301,17 +250,9 @@ const styles = StyleSheet.create({
         flexBasis: '31%', // Let Flexbox handle the calculation
         paddingVertical: 16,
         paddingHorizontal: 8,
-        borderRadius: 16,
+        borderRadius: 12,
         alignItems: 'center',
-        borderWidth: 1,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOpacity: 0.02,
-                shadowRadius: 5,
-                shadowOffset: { width: 0, height: 2 },
-            },
-        }),
+        borderWidth: 1.2,
     },
     iconBox: {
         width: 48,

@@ -10,8 +10,7 @@ import {
     SafeAreaView,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import Icon from "react-native-vector-icons/MaterialIcons";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons, MaterialIcons as Icon } from "@expo/vector-icons";
 import { endCall, listenCall } from "../../services/callService";
 import { CallStackParamList } from "../../navigation/types";
 import { createExitToChat } from "../../navigation/ChatNavigation";

@@ -13,9 +13,13 @@ import { Colors, smoothTransition } from '../utils/theme';
 import FriendsNearbyScreen from '../screens/FriendsNearbyScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ChatDetailScreen } from '../screens/ChatDetailScreen';
+import CreateNoteScreen from '../screens/CreateNoteScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ChatStackParamList, DashboardStackParamList, SettingsStackParamList } from './types';
+import { ChatStackParamList, DashboardStackParamList, SettingsStackParamList, NotificationStackParamList } from './types';
 import ProfileFeedScreen from '../screens/ProfileFeedScreen';
+import PostDetailScreen from '../screens/PostDetailScreen';
+import CreateStoryScreen from '../screens/CreateStoryScreen';
+import EditProfileDetailsScreen from '../screens/EditProfileDetailsScreen';
 import { useUser } from '../contexts/UserContext';
 import FriendsScreen from '../screens/FriendsScreen';
 import HelpCenterScreen from '../screens/HelpCenterScreen';
@@ -33,17 +37,19 @@ import {
     Bell,
     Gear
 } from 'phosphor-react-native';
+import NotificationDetailScreen from 'screens/NotificationDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const ChatStack = createNativeStackNavigator<ChatStackParamList>();
 const DashboardStack = createNativeStackNavigator<DashboardStackParamList>();
 const SettingsStack = createNativeStackNavigator<SettingsStackParamList>();
+const NotificationStack = createNativeStackNavigator<NotificationStackParamList>();
 
 const tabItems = [
     { name: SCREENS.HOME, label: 'Trang chủ', Icon: House, component: HomeScreen },
     { name: SCREENS.DASHBOARD, label: 'Tiện ích', Icon: SquaresFour, component: DashboardStackScreen },
     { name: SCREENS.CHATS, label: 'Tin nhắn', Icon: ChatCircleDots, component: ChatStackScreen },
-    { name: SCREENS.NOTIFICATIONS, label: 'Thông báo', Icon: Bell, component: NotificationsScreen },
+    { name: SCREENS.NOTIFICATIONS, label: 'Thông báo', Icon: Bell, component: NotificationStackScreen },
     { name: SCREENS.SETTINGS, label: 'Cài đặt', Icon: Gear, component: SettingsStackScreen },
 ];
 
@@ -52,7 +58,18 @@ function ChatStackScreen() {
         <ChatStack.Navigator screenOptions={smoothTransition}>
             <ChatStack.Screen name={SCREENS.CHAT_TAB} component={ChatScreen} />
             <ChatStack.Screen name={SCREENS.CHAT_DETAIL} component={ChatDetailScreen} />
+            <ChatStack.Screen name={SCREENS.CREATE_NOTE} component={CreateNoteScreen} />
         </ChatStack.Navigator>
+    );
+}
+
+function NotificationStackScreen() {
+    return (
+        <NotificationStack.Navigator screenOptions={smoothTransition}>
+            <NotificationStack.Screen name="NotificationsMain" component={NotificationsScreen} />
+            <NotificationStack.Screen name={SCREENS.NOTIFICATION_DETAIL} component={NotificationDetailScreen} />
+            <NotificationStack.Screen name="PostDetailScreen" component={PostDetailScreen} />
+        </NotificationStack.Navigator>
     );
 }
 
@@ -64,6 +81,8 @@ function DashboardStackScreen() {
             <DashboardStack.Screen name={SCREENS.GRADES} component={GradesScreen} />
             <DashboardStack.Screen name={SCREENS.FRIENDS_NEARBY} component={FriendsNearbyScreen} />
             <DashboardStack.Screen name={SCREENS.PROFILE_FEED} component={ProfileFeedScreen} />
+            <DashboardStack.Screen name={SCREENS.CREATE_STORY} component={CreateStoryScreen} />
+            <DashboardStack.Screen name={SCREENS.EDIT_PROFILE_DETAILS} component={EditProfileDetailsScreen} />
             <DashboardStack.Screen name={SCREENS.FRIENDS} component={FriendsScreen} />
             <DashboardStack.Screen name={SCREENS.WEATHER} component={WeatherScreen} />
         </DashboardStack.Navigator>
@@ -122,6 +141,8 @@ export default function MainTabs() {
                                                 rootScreenName = SCREENS.CHAT_TAB;
                                             } else if (tab.name === SCREENS.SETTINGS) {
                                                 rootScreenName = SCREENS.SETTINGS_MAIN;
+                                            } else if (tab.name === SCREENS.NOTIFICATIONS) {
+                                                rootScreenName = 'NotificationsMain';
                                             }
 
                                             if (rootScreenName) {
@@ -161,8 +182,8 @@ function CustomTabBar({ state, navigation }: any) {
 
     const theme = {
         bg: darkMode ? '#0F172A' : '#FFFFFF',
-        border: darkMode ? '#1E293B' : '#E2E8F0',
-        textInactive: darkMode ? '#64748B' : '#94A3B8',
+        border: darkMode ? '#1E293B' : '#dfdfdfff',
+        textInactive: darkMode ? '#64748B' : '#525252ff',
         active: Colors.primary,
     };
 
@@ -197,6 +218,10 @@ function CustomTabBar({ state, navigation }: any) {
                                 } else if (route.name === SCREENS.SETTINGS) {
                                     navigation.navigate(SCREENS.SETTINGS, {
                                         screen: SCREENS.SETTINGS_MAIN,
+                                    });
+                                } else if (route.name === SCREENS.NOTIFICATIONS) {
+                                    navigation.navigate(SCREENS.NOTIFICATIONS, {
+                                        screen: 'NotificationsMain',
                                     });
                                 } else {
                                     navigation.navigate({ name: route.name, merge: true });
@@ -274,11 +299,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     iconContainer: {
-        width: 32,
-        height: 32,
+        width: 30,
+        height: 30,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 2,
+        // marginBottom: 2,
     },
     tabLabel: {
         fontSize: 10,

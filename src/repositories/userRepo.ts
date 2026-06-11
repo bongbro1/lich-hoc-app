@@ -53,6 +53,15 @@ const mapUserProfile = (studentId: string, data: any): UserProfileModel => ({
   posts: Number(data.posts ?? 0),
   lat: typeof data.lat === 'number' ? data.lat : null,
   lng: typeof data.lng === 'number' ? data.lng : null,
+  work: data.work ?? null,
+  education: data.education ?? null,
+  currentCity: data.currentCity ?? null,
+  hometown: data.hometown ?? null,
+  relationship: data.relationship ?? null,
+  socialLink: data.socialLink ?? null,
+  showFollowers: data.showFollowers !== false,
+  stories: Array.isArray(data.stories) ? data.stories : [],
+  note: data.note ?? null,
 });
 
 const haversineInMeters = (
@@ -309,6 +318,17 @@ export const userRepo = {
         studentId: snapshot.id,
         ...snapshot.data(),
       });
+    });
+  },
+
+  async updateProfile(studentId: string, updates: Partial<UserProfileModel>) {
+    await updateDoc(doc(db, 'users', studentId), updates);
+  },
+
+  async updateNote(studentId: string, note: string | null) {
+    await updateDoc(doc(db, 'users', studentId), {
+      note,
+      noteUpdatedAt: serverTimestamp(),
     });
   }
 };

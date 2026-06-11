@@ -20,6 +20,7 @@ export const STORAGE_KEYS = {
   THREE_DAYS_NOTIFICATION_IDS: "THREE_DAYS_NOTIFICATION_IDS",
   DARK_MODE: "DARK_MODE",
   API_URL: "API_URL",
+  STORIES: "STORIES",
 } as const;
 
 const storageService = {

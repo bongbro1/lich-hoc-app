@@ -91,18 +91,18 @@ export const LoadingOverlay = () => {
               <View style={styles.centerDot} />
             </View>
           </View>
-
+          {/* 
           <Text style={[styles.loadingText, { color: theme.text }]}>
             {message || 'Đang xử lý...'}
           </Text>
-          <Text style={[styles.subText, { color: theme.textMuted }]}>Vui lòng chờ trong giây lát</Text>
+          <Text style={[styles.subText, { color: theme.textMuted }]}>Vui lòng chờ trong giây lát</Text> */}
         </Animated.View>
       </Animated.View>
     </Modal>
   );
 };
 
-const SPINNER_SIZE = 64;
+const SPINNER_SIZE = 44;
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -111,22 +111,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   card: {
-    borderRadius: 20,
-    paddingVertical: 32,
-    paddingHorizontal: 36,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
-    minWidth: 200,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+    minWidth: 76,
     overflow: 'hidden',
   },
   spinnerWrap: {
     width: SPINNER_SIZE,
     height: SPINNER_SIZE,
-    marginBottom: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -135,42 +134,43 @@ const styles = StyleSheet.create({
     width: SPINNER_SIZE,
     height: SPINNER_SIZE,
     borderRadius: SPINNER_SIZE / 2,
-    borderWidth: 4,
+    borderWidth: 3.5,
   },
   spinnerArc: {
     position: 'absolute',
     width: SPINNER_SIZE,
     height: SPINNER_SIZE,
     borderRadius: SPINNER_SIZE / 2,
-    borderWidth: 4,
+    borderWidth: 3.5,
     borderColor: 'transparent',
     borderTopColor: Colors.primary,
     borderRightColor: Colors.primary,
   },
   spinnerCenter: {
     position: 'absolute',
-    width: SPINNER_SIZE - 16,
-    height: SPINNER_SIZE - 16,
-    borderRadius: (SPINNER_SIZE - 16) / 2,
+    width: SPINNER_SIZE - 12,
+    height: SPINNER_SIZE - 12,
+    borderRadius: (SPINNER_SIZE - 12) / 2,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   centerDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: Colors.primary,
     opacity: 0.6,
   },
   loadingText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
+    marginTop: 12,
     marginBottom: 4,
     textAlign: 'center',
   },
   subText: {
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
   },
 });

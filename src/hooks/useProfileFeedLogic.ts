@@ -13,7 +13,7 @@ import { userRepo } from '../repositories/userRepo';
 import { imgbbService } from '../services/imgbbService';
 import { SCREENS } from '../configs/constants';
 
-export const useProfileFeedLogic = (studentId: string | undefined, navigation: any) => {
+export const useProfileFeedLogic = (studentId: string | undefined, navigation: any, initialProfile?: any) => {
     const { user: currentUser, setUser } = useUser();
     const flatListRef = useRef<FlatList<PostModel> | null>(null);
     const scrollOffsetRef = useRef(0);
@@ -26,19 +26,22 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
     const [newPostImages, setNewPostImages] = useState<UploadImageModel[]>([]);
     const [newPostContent, setNewPostContent] = useState('');
     const [refreshing, setRefreshing] = useState(false);
-    const [loadingPage, setLoadingPage] = useState(true);
+    const [loadingPage, setLoadingPage] = useState(!isCurrentUser && !initialProfile);
     const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
     const [localCoverUri, setLocalCoverUri] = useState(DEFAULT_COVER_URL);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [optimisticStatus, setOptimisticStatus] = useState<FriendRelationStatus | null>(null);
     const [activeFilter, setActiveFilter] = useState("all");
     const [showOptions, setShowOptions] = useState(false);
+    const [stories, setStories] = useState<any[]>([]);
 
     const {
         profile,
         loadProfile,
         loadCounts,
     } = useUserVM();
+
+    const displayProfile = isCurrentUser ? { ...currentUser, ...profile } : (profile || initialProfile || null);
 
     const {
         posts,
@@ -47,6 +50,7 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         loadPosts,
         deletePost,
         submitting,
+        loading: loadingPosts,
     } = usePostVM(studentId);
 
     const {
@@ -66,41 +70,83 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         listenFollowers,
         listenFollowing,
         fetchRelation,
+        friendIds,
     } = useFriendVM();
 
-    const avatarUri = localAvatarUri ?? profile?.avatar ?? currentUser?.avatar;
-    const coverUri = localCoverUri ?? profile?.cover ?? currentUser?.cover ?? DEFAULT_COVER_URL;
+    const [friendsList, setFriendsList] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!friendIds || friendIds.length === 0) {
+            setFriendsList([]);
+            return;
+        }
+
+        let active = true;
+        const fetchFriends = async () => {
+            try {
+                const details = await userRepo.getUsersByIds(friendIds);
+                if (active) {
+                    setFriendsList(details);
+                }
+            } catch (err) {
+                console.error("Failed to fetch friends profiles:", err);
+            }
+        };
+
+        fetchFriends();
+        return () => {
+            active = false;
+        };
+    }, [friendIds]);
+
+    const handleViewAllFriends = useCallback(() => {
+        navigation.navigate(SCREENS.FRIENDS);
+    }, [navigation]);
+
+    const handleGoToUserProfile = useCallback((targetStudentId: string) => {
+        if (!targetStudentId) return;
+        navigation.push('ProfileFeedScreen', { studentId: targetStudentId });
+    }, [navigation]);
+
+    const avatarUri = localAvatarUri ?? displayProfile?.avatar ?? currentUser?.avatar;
+    const coverUri = localCoverUri ?? displayProfile?.cover ?? currentUser?.cover ?? DEFAULT_COVER_URL;
     const displayStatus = optimisticStatus ?? relation.status ?? 'unknown';
     const config = FRIEND_UI[displayStatus];
 
     useEffect(() => {
-        setLocalAvatarUri(profile?.avatar ?? currentUser?.avatar ?? null);
-    }, [profile?.avatar, currentUser?.avatar]);
+        setLocalAvatarUri(displayProfile?.avatar ?? currentUser?.avatar ?? null);
+    }, [displayProfile?.avatar, currentUser?.avatar]);
 
     useEffect(() => {
-        setLocalCoverUri(profile?.cover ?? currentUser?.cover ?? DEFAULT_COVER_URL);
-    }, [profile?.cover, currentUser?.cover]);
+        setLocalCoverUri(displayProfile?.cover ?? currentUser?.cover ?? DEFAULT_COVER_URL);
+    }, [displayProfile?.cover, currentUser?.cover]);
 
     useEffect(() => {
-        if (!profile?.studentId || !currentUser?.studentId) return;
+        if (displayProfile?.stories) {
+            setStories(displayProfile.stories);
+        }
+    }, [displayProfile?.stories]);
 
-        const unsub1 = listenFriends(profile.studentId);
-        const unsub2 = listenFollowers(profile.studentId);
-        const unsub3 = listenFollowing(profile.studentId);
+    useEffect(() => {
+        if (!studentId || !currentUser?.studentId) return;
+
+        const unsub1 = listenFriends(studentId);
+        const unsub2 = listenFollowers(studentId);
+        const unsub3 = listenFollowing(studentId);
 
         let unsub4: (() => void) | undefined;
         if (!isCurrentUser) {
-            unsub4 = listenRelation(currentUser.studentId, profile.studentId);
+            unsub4 = listenRelation(currentUser.studentId, studentId);
         }
 
         return () => {
             unsub1?.(); unsub2?.(); unsub3?.(); unsub4?.();
         };
-    }, [profile?.studentId, currentUser?.studentId, isCurrentUser]);
+    }, [studentId, currentUser?.studentId, isCurrentUser]);
 
     const handleLoadProfile = async () => {
         if (!studentId) return;
-        await Promise.all([loadProfile(studentId), loadCounts(studentId)]);
+        await loadProfile(studentId);
     };
 
     const fetchPosts = async () => {
@@ -108,7 +154,6 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
     };
 
     const onRefresh = async () => {
-        setLoadingPage(true);
         setRefreshing(true);
         setNewPostImages([]);
         await Promise.all([
@@ -120,42 +165,170 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         ]);
         setRefreshing(false);
         setRefreshTrigger(prev => prev + 1);
-        setLoadingPage(false);
     };
 
     useEffect(() => {
         let mounted = true;
-        const task = InteractionManager.runAfterInteractions(() => {
-            const init = async () => {
-                if (!studentId) return;
-                setLoadingPage(true);
-                await handleLoadProfile();
-                if (mounted) setLoadingPage(false);
-                Promise.all([
-                    fetchPosts(),
-                    (!isCurrentUser && currentUser?.studentId && studentId)
-                        ? fetchRelation(currentUser.studentId, studentId)
-                        : Promise.resolve()
-                ]);
-            };
-            init();
-        });
+        const init = async () => {
+            if (!studentId) return;
+
+            // Start fetching immediately on mount concurrently
+            const profilePromise = handleLoadProfile();
+            const postsPromise = fetchPosts();
+            const relationPromise = (!isCurrentUser && currentUser?.studentId && studentId)
+                ? fetchRelation(currentUser.studentId, studentId)
+                : Promise.resolve();
+
+            // Await ONLY profile data (if we don't have initialProfile) to render instantly.
+            // Do NOT block on relationPromise; the friend button will show a clean spinner loading indicator in the button itself.
+            if (!initialProfile) {
+                await profilePromise;
+            }
+
+            if (mounted) {
+                setLoadingPage(false);
+            }
+
+            // Remaining tasks continue loading in the background
+            await postsPromise;
+        };
+        init();
         return () => {
             mounted = false;
-            task.cancel();
         };
     }, [studentId, currentUser?.studentId, isCurrentUser]);
+
+    useEffect(() => {
+        if (!navigation || !studentId) return;
+        const unsubscribe = navigation.addListener('focus', () => {
+            handleLoadProfile();
+        });
+        return unsubscribe;
+    }, [navigation, studentId]);
+
+    // Sync fetched profile details back to local UserContext and storage for instant subsequent mounts
+    useEffect(() => {
+        if (isCurrentUser && profile) {
+            setUser(prev => {
+                if (!prev) return prev;
+                if (
+                    prev.work === profile.work &&
+                    JSON.stringify(prev.education) === JSON.stringify(profile.education) &&
+                    prev.currentCity === profile.currentCity &&
+                    prev.hometown === profile.hometown &&
+                    prev.relationship === profile.relationship &&
+                    prev.socialLink === profile.socialLink &&
+                    prev.showFollowers === profile.showFollowers
+                ) {
+                    return prev;
+                }
+                const updatedUser = {
+                    ...prev,
+                    work: profile.work,
+                    education: profile.education,
+                    currentCity: profile.currentCity,
+                    hometown: profile.hometown,
+                    relationship: profile.relationship,
+                    socialLink: profile.socialLink,
+                    showFollowers: profile.showFollowers,
+                };
+                storageService.set({ key: STORAGE_KEYS.USER, value: updatedUser });
+                return updatedUser;
+            });
+        }
+    }, [profile, isCurrentUser]);
 
     const resizeImage = async (uri: string) => {
         const result = await ImageManipulator.manipulateAsync(uri, [{ resize: { width: 600 } }], { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG });
         return result.uri;
     };
 
+    // Load cached stories on mount
+    useEffect(() => {
+        const loadStories = async () => {
+            if (!studentId) return;
+            const cachedStoriesMap = await storageService.get({ key: "STORIES" });
+            if (cachedStoriesMap && cachedStoriesMap[studentId]) {
+                setStories(cachedStoriesMap[studentId]);
+            }
+        };
+        loadStories();
+    }, [studentId]);
+
+    const handleAddStory = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            alert('Cần quyền truy cập thư viện ảnh để thêm vào tin!');
+            return;
+        }
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                quality: 0.9,
+            });
+            if (!result.canceled && result.assets?.[0]?.uri) {
+                const localUri = result.assets[0].uri;
+                alert('Đang xử lý ảnh và tải lên tin...');
+
+                // 1. Resize ảnh
+                const resized = await resizeImage(localUri);
+
+                // 2. Upload lên ImgBB để lấy link HTTPS
+                const fileName = `story_${studentId}_${Date.now()}.jpg`;
+                const remoteUrl = await imgbbService.uploadImage(resized, fileName);
+
+                if (!remoteUrl) {
+                    alert('Lỗi tải ảnh lên server, vui lòng thử lại.');
+                    return;
+                }
+
+                // 3. Cập nhật State & Firestore Database
+                const newStory = { url: remoteUrl, createdAt: new Date().toISOString() };
+                const updatedStories = [...stories, newStory];
+                setStories(updatedStories);
+
+                // Lưu vào Firestore
+                await userRepo.updateProfile(studentId!, { stories: updatedStories });
+
+                // 4. Lưu Local Storage
+                const cached = await storageService.get({ key: "STORIES" }) || {};
+                cached[studentId!] = updatedStories;
+                await storageService.set({ key: "STORIES", value: cached });
+
+                alert('Đã thêm ảnh vào tin thành công!');
+            }
+        } catch (error) {
+            console.log("Error adding story:", error);
+            alert('Có lỗi xảy ra khi thêm vào tin.');
+        }
+    };
+
+    const handleDeleteStory = async (index: number) => {
+        if (!studentId) return;
+        try {
+            const updatedStories = [...stories];
+            updatedStories.splice(index, 1);
+            setStories(updatedStories);
+
+            // Lưu vào Firestore
+            await userRepo.updateProfile(studentId, { stories: updatedStories });
+
+            // Lưu Local Storage
+            const cached = await storageService.get({ key: "STORIES" }) || {};
+            cached[studentId] = updatedStories;
+            await storageService.set({ key: "STORIES", value: cached });
+        } catch (error) {
+            console.log("Error deleting story:", error);
+            alert('Có lỗi xảy ra khi xóa tin.');
+        }
+    };
+
     const handlePickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') return alert('Cần quyền truy cập ảnh');
         try {
-            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, quality: 1 });
+            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 1 });
             if (!result.canceled && result.assets) {
                 const images = await Promise.all(result.assets.map(async (asset, index) => {
                     const resizedUri = await resizeImage(asset.uri);
@@ -170,7 +343,7 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         if (!studentId || !isCurrentUser) return;
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') return;
-        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.85 });
+        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
         if (result.canceled || !result.assets?.[0]?.uri) return;
         const nextAvatarUrl = await userRepo.uploadAvatar(studentId, result.assets[0].uri);
         setLocalAvatarUri(nextAvatarUrl);
@@ -186,7 +359,7 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         if (!isCurrentUser || !studentId) return;
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') return;
-        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [16, 7], quality: 0.9 });
+        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [16, 7], quality: 0.9 });
         if (result.canceled || !result.assets?.[0]?.uri) return;
         const nextCoverUrl = await userRepo.uploadCover(studentId, result.assets[0].uri);
         setLocalCoverUri(nextCoverUrl);
@@ -266,10 +439,9 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         } catch (e) { setOptimisticStatus(null); }
     };
 
+
     const handleRequestCommentFocus = useCallback((index: number) => {
-        setTimeout(() => {
-            flatListRef.current?.scrollToIndex?.({ index, animated: true, viewPosition: 0.3 });
-        }, 200);
+        // Handled cleanly by measureAndScrollComposer on autoFocus to prevent scrolling conflicts
     }, []);
 
     const measureAndScrollComposer = useCallback((input: TextInput | null) => {
@@ -317,13 +489,13 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         } catch (err) { console.error('Block error:', err); }
     };
 
-    const handleDeletePost = async (postId: string) => {
+    const handleDeletePost = useCallback(async (postId: string) => {
         if (!currentUser || postId == '') return;
         try {
             await deletePost(postId);
             setPosts(prev => prev.filter(post => post.id !== postId));
         } catch (e) { console.error(e); }
-    };
+    }, [currentUser, deletePost, setPosts]);
 
     const actions = [
         ...(relation.status === 'friends' ? [{ label: 'Hủy kết bạn', onPress: onRemoveFriend, icon: 'person-remove' as const }] : []),
@@ -341,9 +513,10 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
     return {
         isCurrentUser,
         currentUser,
-        profile,
+        profile: displayProfile,
         posts: filteredPosts,
         loadingPage,
+        loadingPosts,
         refreshing,
         onRefresh,
         avatarUri,
@@ -367,6 +540,8 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         flatListRef,
         scrollOffsetRef,
         handlePickImage,
+        handleAddStory,
+        handleDeleteStory,
         handleChangeAvatar,
         handleChangeCover,
         handleAddPost,
@@ -378,5 +553,9 @@ export const useProfileFeedLogic = (studentId: string | undefined, navigation: a
         handleRequestCommentFocus,
         handleComposerFocus,
         handleAddFriend,
+        friendsList,
+        handleViewAllFriends,
+        handleGoToUserProfile,
+        stories,
     };
 };

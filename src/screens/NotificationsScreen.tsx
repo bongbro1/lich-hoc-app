@@ -34,6 +34,9 @@ import { useNotificationVM } from 'viewmodels/useNotificationVM';
 import { NotificationModel } from 'models/notification';
 import { userRepo } from 'repositories/userRepo';
 import BottomActionSheet, { BottomAction } from '../components/BottomActionSheet';
+import Skeleton from '../types/Skeleton';
+import SimpleHeader from '../components/SimpleHeader';
+import { SCREENS } from 'configs/constants';
 
 type ReadFilter = 'all' | 'unread' | 'read';
 type CategoryFilter = 'all' | 'system' | 'friends' | 'activity';
@@ -68,7 +71,7 @@ export default function NotificationsScreen() {
         card: darkMode ? '#1E293B' : '#FFFFFF',
         text: darkMode ? '#F8FAFC' : '#0F172A',
         textSecondary: darkMode ? '#94A3B8' : '#64748B',
-        textMuted: darkMode ? '#64748B' : '#94A3B8',
+        textMuted: darkMode ? '#64748B' : '#5c6571ff',
         border: darkMode ? '#475569' : '#E2E8F0',
         input: darkMode ? '#1E293B' : '#F1F5F9',
         badge: darkMode ? '#1E293B' : '#FFFFFF',
@@ -90,6 +93,7 @@ export default function NotificationsScreen() {
         listenNotifications,
         markAsRead,
         markAllAsRead,
+        initialLoading,
     } = useNotificationVM();
 
     const { accept, reject } = useFriendVM();
@@ -192,13 +196,12 @@ export default function NotificationsScreen() {
 
         return (
             <TouchableOpacity
-                activeOpacity={0.7}
+                activeOpacity={0.95}
                 onPress={() => {
-                    setSelectedNotification(item);
-                    setModalVisible(true);
                     if (isUnread && user?.studentId) {
                         markAsRead(user.studentId, item.id);
                     }
+                    (navigation as any).navigate(SCREENS.NOTIFICATION_DETAIL, { notification: item });
                 }}
                 style={[
                     styles.notificationRow,
@@ -217,7 +220,8 @@ export default function NotificationsScreen() {
                 <View style={styles.rowContent}>
                     <Text style={[styles.messageInline, { color: theme.text }]} numberOfLines={2}>
                         <Text style={[styles.title, { color: theme.text }]}>{item.title} </Text>
-                        <Text style={{ color: theme.textSecondary }}>{item.body}</Text>
+                        {"\n"}
+                        <Text style={{ color: theme.textSecondary, fontSize: 14 }}>{item.body}</Text>
                     </Text>
                     <Text style={[styles.date, { color: isUnread ? Colors.primary : theme.textSecondary }]}>{formatTimeAgo(item.createdAt ?? '')}</Text>
                 </View>
@@ -312,50 +316,52 @@ export default function NotificationsScreen() {
     const renderTopBar = () => {
         if (isSearching) {
             return (
-                <View style={[styles.topBar, { paddingTop: insets.top + 8, backgroundColor: Colors.primary, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }]}>
-                    <TouchableOpacity onPress={() => { setIsSearching(false); setSearchQuery(''); }} style={styles.topBarBackBtn}>
-                        <Icon name="arrow-back" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                    <TextInput
-                        autoFocus
-                        placeholder="Tìm kiếm thông báo..."
-                        placeholderTextColor="rgba(255,255,255,0.7)"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        underlineColorAndroid="transparent"
-                        style={[styles.searchInputHeader, { color: '#FFF', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }]}
-                    />
-                    {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.topBarClearBtn}>
-                            <X size={20} color="rgba(255,255,255,0.8)" weight="bold" />
+                <SimpleHeader showBackButton={false}>
+                    <View style={styles.headerSearchWrapper}>
+                        <TouchableOpacity onPress={() => { setIsSearching(false); setSearchQuery(''); }} style={styles.searchBackBtn}>
+                            <Icon name="arrow-back" size={24} color="#FFF" />
                         </TouchableOpacity>
-                    )}
-                </View>
+                        <TextInput
+                            autoFocus
+                            placeholder="Tìm kiếm..."
+                            placeholderTextColor="rgba(255,255,255,0.7)"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            style={styles.searchInputHeader}
+                        />
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                <X size={20} color="#FFF" weight="bold" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </SimpleHeader>
             );
         }
 
         return (
-            <View style={[styles.topBar, { paddingTop: insets.top + 8, backgroundColor: Colors.primary, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }]}>
-                <View style={styles.topBarLeft}>
-                    <Text style={[styles.topBarTitle, { color: '#FFF' }]}>Thông báo</Text>
-                </View>
-                <View style={styles.topBarRight}>
-                    <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => setIsSearching(true)}
-                        style={[styles.topBarIconBtn, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
-                    >
-                        <MagnifyingGlass size={20} color="#FFF" weight="bold" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => setShowOptions(true)}
-                        style={[styles.topBarIconBtn, { backgroundColor: 'rgba(255,255,255,0.15)' }]}
-                    >
-                        <Icon name="more-horiz" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
-            </View>
+            <SimpleHeader
+                title="Thông báo"
+                showBackButton={false}
+                rightComponent={
+                    <View style={styles.headerRightActions}>
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => setIsSearching(true)}
+                            style={styles.headerIconBtn}
+                        >
+                            <MagnifyingGlass size={20} color="#FFF" weight="bold" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => setShowOptions(true)}
+                            style={styles.headerIconBtn}
+                        >
+                            <Icon name="more-horiz" size={24} color="#FFF" />
+                        </TouchableOpacity>
+                    </View>
+                }
+            />
         );
     };
 
@@ -364,12 +370,11 @@ export default function NotificationsScreen() {
             style={[
                 styles.newFilterChip,
                 {
-                    backgroundColor: active ? Colors.primary : (darkMode ? '#334155' : '#F8FAFC'),
-                    borderColor: active ? Colors.primary : (darkMode ? '#475569' : '#E2E8F0')
+                    backgroundColor: active ? Colors.primary : (darkMode ? '#334155' : '#F1F5F9'),
                 }
             ]}
             onPress={() => { onPress(); setShowOptions(false); }}
-            activeOpacity={0.7}
+            activeOpacity={0.95}
         >
             {React.cloneElement(icon as React.ReactElement, { color: active ? '#FFF' : (darkMode ? '#94A3B8' : '#64748B') } as any)}
             <Text style={[styles.newFilterChipText, { color: active ? '#FFF' : theme.text }]}>{label}</Text>
@@ -417,55 +422,83 @@ export default function NotificationsScreen() {
         <View style={[styles.container, { backgroundColor: theme.bg }]}>
             {renderTopBar()}
 
-            <FlatList
-                data={displayedNotifications}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                contentContainerStyle={styles.listContainer}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                onScrollBeginDrag={() => {
-                    if (filtersVisible) {
-                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                        setFiltersVisible(false);
-                    }
-                }}
-                onEndReached={() => {
-                    if (visibleCount < filteredNotifications.length) {
-                        setVisibleCount(prev => prev + 10);
-                    }
-                }}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={
-                    visibleCount < filteredNotifications.length ? (
-                        <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                            <ActivityIndicator color={Colors.primary} size="small" />
+            {initialLoading ? (
+                <View style={{ flex: 1 }}>
+                    {Array.from({ length: 7 }).map((_, idx) => (
+                        <View
+                            key={idx}
+                            style={[
+                                styles.notificationRow,
+                                {
+                                    backgroundColor: theme.bg,
+                                    borderTopColor: theme.border,
+                                    alignItems: 'center',
+                                }
+                            ]}
+                        >
+                            <View style={styles.avatarWrapperRow}>
+                                <Skeleton width={60} height={60} radius={30} />
+                            </View>
+                            <View style={styles.rowContent}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <Skeleton width="60%" height={16} radius={4} />
+                                </View>
+                                <Skeleton width="90%" height={14} radius={4} style={{ marginBottom: 6 }} />
+                                <Skeleton width="40%" height={14} radius={4} />
+                            </View>
                         </View>
-                    ) : null
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyState}>
-                        <View style={[styles.emptyIconContainer, { backgroundColor: darkMode ? '#1E293B' : '#F1F5F9' }]}>
-                            {notifications.length === 0 ? (
-                                <Bell size={40} color={darkMode ? '#94A3B8' : '#64748B'} weight="duotone" />
-                            ) : (
-                                <MagnifyingGlass size={40} color={darkMode ? '#94A3B8' : '#64748B'} weight="duotone" />
+                    ))}
+                </View>
+            ) : (
+                <FlatList
+                    data={displayedNotifications}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderItem}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    onScrollBeginDrag={() => {
+                        if (filtersVisible) {
+                            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                            setFiltersVisible(false);
+                        }
+                    }}
+                    onEndReached={() => {
+                        if (visibleCount < filteredNotifications.length) {
+                            setVisibleCount(prev => prev + 10);
+                        }
+                    }}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={
+                        visibleCount < filteredNotifications.length ? (
+                            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                                <ActivityIndicator color={Colors.primary} size="small" />
+                            </View>
+                        ) : null
+                    }
+                    ListEmptyComponent={
+                        <View style={styles.emptyState}>
+                            <View style={[styles.emptyIconContainer, { backgroundColor: darkMode ? '#1E293B' : '#F1F5F9' }]}>
+                                {notifications.length === 0 ? (
+                                    <Bell size={40} color={darkMode ? '#94A3B8' : '#64748B'} weight="duotone" />
+                                ) : (
+                                    <MagnifyingGlass size={40} color={darkMode ? '#94A3B8' : '#64748B'} weight="duotone" />
+                                )}
+                            </View>
+                            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                                {notifications.length === 0 ? 'Chưa có thông báo nào' : 'Không có kết quả phù hợp'}
+                            </Text>
+                            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                                {notifications.length === 0 ? 'Khi có hoạt động mới, bạn sẽ thấy chúng ở đây.' : 'Thử đổi từ khóa tìm kiếm.'}
+                            </Text>
+                            {hasActiveFilters && (
+                                <TouchableOpacity activeOpacity={0.8} onPress={clearFilters} style={styles.emptyResetBtn}>
+                                    <Text style={styles.emptyResetText}>Xóa tất cả bộ lọc</Text>
+                                </TouchableOpacity>
                             )}
                         </View>
-                        <Text style={[styles.emptyTitle, { color: theme.text }]}>
-                            {notifications.length === 0 ? 'Chưa có thông báo nào' : 'Không có kết quả phù hợp'}
-                        </Text>
-                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                            {notifications.length === 0 ? 'Khi có hoạt động mới, bạn sẽ thấy chúng ở đây.' : 'Thử đổi từ khóa tìm kiếm.'}
-                        </Text>
-                        {hasActiveFilters && (
-                            <TouchableOpacity activeOpacity={0.8} onPress={clearFilters} style={styles.emptyResetBtn}>
-                                <Text style={styles.emptyResetText}>Xóa tất cả bộ lọc</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                }
-            />
+                    }
+                />
+            )}
 
             <BottomActionSheet
                 visible={showOptions}
@@ -492,167 +525,66 @@ export default function NotificationsScreen() {
                     <Text style={{ color: '#fff', fontWeight: '600' }}>Đã đánh dấu tất cả là đã đọc</Text>
                 </Snackbar>
             </Portal>
-
-            <NotificationDetails
-                visible={modalVisible}
-                notification={selectedNotification}
-                onClose={() => setModalVisible(false)}
-            />
         </View>
     );
 }
 
-const NotificationDetails = ({ visible, notification, onClose }: { visible: boolean; notification: NotificationModel | null; onClose: () => void }) => {
-    const { darkMode } = useUser();
-    if (!notification) return null;
-
-    const isFriend = FRIEND_TYPES.includes(notification.type);
-    const isActivity = ACTIVITY_TYPES.includes(notification.type);
-    const isSystem = notification.type === 'system';
-
-    const getThemeColor = () => {
-        if (isSystem) return '#06B6D4'; // Cyan
-        if (isFriend) return '#6366F1'; // Indigo
-        if (isActivity) return '#F43F5E'; // Rose
-        return Colors.primary;
-    };
-
-    const themeColor = getThemeColor();
-
-    const getIcon = () => {
-        const iconProps = { size: 32, color: '#FFF', weight: "duotone" as any };
-        switch (notification.type) {
-            case 'system': return <Cpu {...iconProps} />;
-            case 'friend_accept': return <UserCheck {...iconProps} />;
-            case 'follow': return <UserCircle {...iconProps} />;
-            case 'comment': return <ChatCircleText {...iconProps} />;
-            case 'share': return <ShareNetwork {...iconProps} />;
-            case 'post_reaction':
-            case 'comment_reaction': return <Heart {...iconProps} />;
-            default: return <Bell {...iconProps} />;
-        }
-    };
-
-    return (
-        <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.overlay}>
-                    <TouchableWithoutFeedback>
-                        <View style={[styles.modalContent, { backgroundColor: darkMode ? '#1E293B' : '#FFFFFF' }]}>
-                            {/* Premium Header */}
-                            <View style={[styles.modalPremiumHeader, { backgroundColor: Colors.primary }]} />
-
-                            <View style={styles.modalBody}>
-                                <View style={[styles.modalFloatingIcon, { backgroundColor: darkMode ? '#1E293B' : '#FFFFFF' }]}>
-                                    <View style={[styles.modalIconInner, { backgroundColor: Colors.primary }]}>
-                                        {getIcon()}
-                                    </View>
-                                </View>
-                                <View style={styles.modalContentArea}>
-                                    <Text style={[styles.modalTitle, { color: darkMode ? '#F8FAFC' : '#143D6B' }]}>
-                                        {notification.title}
-                                    </Text>
-
-                                    <View style={styles.modalMetaRow}>
-                                        <View style={[styles.modalTypeBadge, { backgroundColor: Colors.primary + '15' }]}>
-                                            <Text style={[styles.modalTypeLabel, { color: Colors.primary }]}>
-                                                {isSystem ? 'Hệ thống' : isFriend ? 'Bạn bè' : 'Hoạt động'}
-                                            </Text>
-                                        </View>
-                                        <Text style={styles.modalDate}>{formatTimeAgo(notification.createdAt ?? '')}</Text>
-                                    </View>
-
-                                    <ScrollView style={styles.scrollBox} showsVerticalScrollIndicator={false} bounces={false}>
-                                        <Text style={[styles.modalMessage, { color: darkMode ? '#CBD5E1' : '#4B5563' }]}>
-                                            {notification.body}
-                                        </Text>
-                                    </ScrollView>
-
-                                    <TouchableOpacity
-                                        style={[styles.modalPrimaryBtn, { backgroundColor: Colors.primary }]}
-                                        onPress={onClose}
-                                        activeOpacity={0.9}
-                                    >
-                                        <Text style={styles.modalPrimaryBtnText}>Đã hiểu</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </View>
-            </TouchableWithoutFeedback>
-        </Modal>
-    );
-};
-
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    topBar: {
+    headerSearchWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingBottom: 12,
-        borderBottomWidth: 1,
+        flex: 1,
     },
-    topBarLeft: {
+    searchBackBtn: {
+        marginRight: 12,
+    },
+    searchInputHeader: {
+        flex: 1,
+        height: 40,
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#FFF',
+        padding: 0,
+    },
+    headerRightActions: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 8,
     },
-    topBarTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-    },
-    topBarRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    topBarIconBtn: {
+    headerIconBtn: {
         width: 36,
         height: 36,
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    topBarBackBtn: {
-        marginRight: 16,
-    },
-    topBarClearBtn: {
-        marginLeft: 12,
-    },
-    searchInputHeader: {
-        flex: 1,
-        height: 40,
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        fontSize: 15,
-        fontWeight: '500',
+        backgroundColor: 'rgba(255,255,255,0.15)',
     },
     scrollableFilterContainer: {
-        paddingBottom: 12,
-        paddingTop: 12,
+        paddingTop: 8,
     },
     statsCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 8,
         borderRadius: 14,
-        marginBottom: 16,
+        marginBottom: 14,
+        borderWidth: 1,
+        borderColor: '#E2E8F0'
     },
     statItem: {
         flex: 1,
         alignItems: 'center',
     },
     statValue: {
-        fontSize: 18,
-        fontWeight: '800',
+        fontSize: 16,
+        fontWeight: '700',
         marginBottom: 2,
     },
     statLabel: {
-        fontSize: 11,
-        fontWeight: '600',
-        textTransform: 'uppercase',
+        fontSize: 12,
+        fontWeight: '500',
     },
     statDivider: {
         width: 1,
@@ -666,10 +598,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     sheetSectionTitle: {
-        fontSize: 12,
-        fontWeight: '800',
-        textTransform: 'uppercase',
-        letterSpacing: 1.5,
+        fontSize: 14,
+        fontWeight: '500',
         marginBottom: 8,
         marginLeft: 4,
     },
@@ -682,22 +612,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 8,
         paddingHorizontal: 12,
-        borderRadius: 16,
-        borderWidth: 1,
+        borderRadius: 12,
         marginRight: 8,
     },
     newFilterChipText: {
         fontSize: 13,
-        fontWeight: '700',
-        marginLeft: 4,
+        fontWeight: '500',
+        marginLeft: 6,
     },
     filterWrapper: {
         paddingHorizontal: 16,
         zIndex: 10,
-    },
-    listContainer: {
-        paddingHorizontal: 0,
-        paddingBottom: 40,
     },
     notificationRow: {
         flexDirection: 'row',

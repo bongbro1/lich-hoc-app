@@ -7,6 +7,7 @@ export const useNotificationVM = () => {
   const [notifications, setNotifications] = useState<NotificationModel[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState('');
+  const [initialLoading, setInitialLoading] = useState(true);
   const { showLoading, hideLoading } = useLoading();
 
   const addNotification = async (params: {
@@ -47,8 +48,10 @@ export const useNotificationVM = () => {
   };
 
   const listenNotifications = (studentId: string) => {
+    setInitialLoading(true);
     return notificationRepo.listenNotifications(studentId, (items) => {
       setNotifications(items);
+      setInitialLoading(false);
     });
   };
 
@@ -62,6 +65,7 @@ export const useNotificationVM = () => {
     notifications,
     unreadCount,
     error,
+    initialLoading,
     addNotification,
     markAsRead,
     markAllAsRead,

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Activity
 import SimpleHeader from '../components/SimpleHeader';
 import { useUser } from '../contexts/UserContext';
 import { Colors } from '../utils/theme';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { configService } from '../services/configService';
 
 export default function HelpCenterScreen() {

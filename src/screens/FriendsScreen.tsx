@@ -13,7 +13,7 @@ import {
   Platform,
   InteractionManager,
 } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
+import { Feather as Icon } from "@expo/vector-icons";
 import FriendItem from "../components/FriendItem";
 import { AppScrollView } from "../components/AppScrollView";
 import SimpleHeader from "../components/SimpleHeader";
@@ -54,6 +54,30 @@ export default function FriendsScreen() {
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [loadingBlocked, setLoadingBlocked] = useState(true);
 
+  // Animation values for pop-up options menu
+  const menuScale = useRef(new Animated.Value(0.92)).current;
+  const menuOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (menuUserId) {
+      menuScale.setValue(0.92);
+      menuOpacity.setValue(0);
+      Animated.parallel([
+        Animated.timing(menuOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.spring(menuScale, {
+          toValue: 1,
+          tension: 110,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [menuUserId]);
+
   const {
     incomingRequests,
     friendIds,
@@ -68,7 +92,22 @@ export default function FriendsScreen() {
     unblockUser,
   } = useFriendVM();
 
-  const closeMenu = () => setMenuUserId(null);
+  const closeMenu = () => {
+    Animated.parallel([
+      Animated.timing(menuOpacity, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(menuScale, {
+        toValue: 0.94,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setMenuUserId(null);
+    });
+  };
 
   const mapIdsToFriends = async (ids: string[]) => {
     if (!user?.studentId || ids.length === 0) {
@@ -293,6 +332,8 @@ export default function FriendsScreen() {
                 <FriendsList
                   friends={visibleFriends}
                   onToggleMenu={handleOpenMenu}
+                  menuUserId={menuUserId}
+                  currentUser={user}
                 />
               )
             )}
@@ -333,29 +374,39 @@ export default function FriendsScreen() {
       {menuUserId && <Pressable style={styles.overlay} onPress={closeMenu} />}
 
       {menuUserId && menuPos && (
-        <View
+        <Animated.View
           style={[
             styles.optionMenuInline,
             {
               backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: darkMode ? 1 : 0.5,
               top: menuPos?.y || 0,
-              left: Math.max(16, Math.min(Dimensions.get('window').width - 216, menuPos?.x || 0))
+              left: Math.max(16, Math.min(Dimensions.get('window').width - 216, menuPos?.x || 0)),
+              opacity: menuOpacity,
+              transform: [{ scale: menuScale }]
             },
           ]}
         >
-          <Pressable
-            style={({ pressed }) => [styles.optionItem, { backgroundColor: pressed ? (darkMode ? '#334155' : '#F1F5F9') : 'transparent' }]}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.optionItem}
             onPress={() => {
-              RootNavigation.navigate("ProfileFeedScreen", { studentId: menuUserId });
+              const friendItem = friends.find(f => f.studentId === menuUserId);
+              RootNavigation.navigate("ProfileFeedScreen", {
+                studentId: menuUserId,
+                initialProfile: friendItem
+              });
               closeMenu();
             }}
           >
             <Icon name="user" size={18} color={theme.textMuted} style={styles.optionIcon} />
             <Text style={[styles.optionText, { color: theme.text }]}>Xem trang cá nhân</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
-            style={({ pressed }) => [styles.optionItem, { backgroundColor: pressed ? (darkMode ? '#334155' : '#F1F5F9') : 'transparent' }]}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.optionItem}
             onPress={async () => {
               if (menuUserId) {
                 await unfriend(user!.studentId, menuUserId);
@@ -365,10 +416,11 @@ export default function FriendsScreen() {
           >
             <Icon name="user-minus" size={18} color="#F59E0B" style={styles.optionIcon} />
             <Text style={[styles.optionText, { color: "#F59E0B" }]}>Hủy kết bạn</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
-            style={({ pressed }) => [styles.optionItem, { backgroundColor: pressed ? (darkMode ? '#334155' : '#F1F5F9') : 'transparent' }]}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.optionItem}
             onPress={async () => {
               if (menuUserId) {
                 await blockUser(user!.studentId, menuUserId);
@@ -378,8 +430,8 @@ export default function FriendsScreen() {
           >
             <Icon name="slash" size={18} color="#EF4444" style={styles.optionIcon} />
             <Text style={[styles.optionText, { color: "#EF4444" }]}>Chặn người này</Text>
-          </Pressable>
-        </View>
+          </TouchableOpacity>
+        </Animated.View>
       )}
     </View>
   );
@@ -391,15 +443,27 @@ export default function FriendsScreen() {
 type FriendsListProps = {
   friends: Friend[];
   onToggleMenu: (item: Friend, pos: { x: number; y: number }) => void;
+  menuUserId: string | null;
+  currentUser: any;
 };
 
 function FriendsList({
   friends,
   onToggleMenu,
+  menuUserId,
+  currentUser,
 }: FriendsListProps) {
   const handleViewProfile = (item: Friend) => {
     RootNavigation.navigate("ProfileFeedScreen", {
       studentId: item.studentId,
+      initialProfile: item,
+    });
+  };
+
+  const handleChatPress = (friend: Friend) => {
+    RootNavigation.navigate("Chats", {
+      screen: "ChatDetailScreen",
+      params: { user: friend, currentUser: currentUser },
     });
   };
 
@@ -422,6 +486,8 @@ function FriendsList({
           user={item}
           onToggleMenu={(pos) => onToggleMenu(item, pos)}
           onViewProfile={() => handleViewProfile(item)}
+          onChatPress={() => handleChatPress(item)}
+          isMenuActive={menuUserId === item.studentId}
         />
       ))}
     </ScrollView>
@@ -585,6 +651,7 @@ export function TabButton({ label, count, active, onPress, darkMode }: TabProps 
 // SKELETON
 // -------------------------------------------------------------
 function FriendSkeletonItem() {
+  const { darkMode } = useUser();
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -609,14 +676,19 @@ function FriendSkeletonItem() {
     outputRange: [0.4, 0.7],
   });
 
+  const borderColor = darkMode ? '#1E293B' : '#F0F2F5';
+
   return (
-    <View style={styles.skeletonCard}>
+    <View style={[styles.skeletonCard, { borderBottomColor: borderColor }]}>
       <Animated.View style={[styles.skeletonAvatar, { opacity }]} />
       <View style={styles.skeletonInfo}>
         <Animated.View style={[styles.skeletonName, { opacity }]} />
         <Animated.View style={[styles.skeletonSub, { opacity }]} />
       </View>
-      <Animated.View style={[styles.skeletonMenu, { opacity }]} />
+      <View style={styles.skeletonActions}>
+        <Animated.View style={[styles.skeletonButton, { opacity }]} />
+        <Animated.View style={[styles.skeletonButton, { opacity }]} />
+      </View>
     </View>
   );
 }
@@ -701,7 +773,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
-    paddingTop: 16,
+    // paddingTop: 16,
   },
   card: {
     backgroundColor: "#FFFFFF",
@@ -858,11 +930,9 @@ const styles = StyleSheet.create({
   skeletonCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.8,
   },
   skeletonAvatar: {
     width: 56,
@@ -872,25 +942,31 @@ const styles = StyleSheet.create({
   },
   skeletonInfo: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 12,
+    justifyContent: "center",
   },
   skeletonName: {
-    width: "60%",
-    height: 20,
-    borderRadius: 6,
-    backgroundColor: "#E2E8F0",
-    marginBottom: 8,
-  },
-  skeletonSub: {
-    width: "40%",
-    height: 14,
+    width: "45%",
+    height: 17,
     borderRadius: 4,
     backgroundColor: "#E2E8F0",
+    marginBottom: 6,
   },
-  skeletonMenu: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  skeletonSub: {
+    width: "30%",
+    height: 13,
+    borderRadius: 3,
+    backgroundColor: "#E2E8F0",
+  },
+  skeletonActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  skeletonButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#E2E8F0",
   },
 });

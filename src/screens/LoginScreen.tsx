@@ -10,7 +10,9 @@ import {
     Dimensions,
     Platform,
     StatusBar,
-    Alert
+    Alert,
+    Keyboard,
+    ScrollView
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
@@ -31,6 +33,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     // Animation values
     const usernameFocused = useRef(new Animated.Value(0)).current;
@@ -38,6 +41,8 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
     const titleScale = useRef(new Animated.Value(0.8)).current;
+
+    const scrollViewRef = useRef<any>(null);
 
     const { loadSavedCredentials, login } = useAuthVM();
 
@@ -74,6 +79,29 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                 useNativeDriver: true,
             })
         ]).start();
+
+        // Lắng nghe sự kiện bàn phím để cập nhật chiều cao và cuộn
+        const keyboardShowListener = Keyboard.addListener(
+            Platform.OS === 'android' ? 'keyboardDidShow' : 'keyboardWillShow',
+            (e) => {
+                setKeyboardHeight(e.endCoordinates.height);
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+            }
+        );
+
+        const keyboardHideListener = Keyboard.addListener(
+            Platform.OS === 'android' ? 'keyboardDidHide' : 'keyboardWillHide',
+            () => {
+                setKeyboardHeight(0);
+            }
+        );
+
+        return () => {
+            keyboardShowListener.remove();
+            keyboardHideListener.remove();
+        };
     }, []);
 
     const handleFocus = (animatedValue: Animated.Value) => {
@@ -118,29 +146,32 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     };
 
     const onLogin = async () => {
-        // Request permissions on Android when clicking Login to improve app startup UX
-        if (Platform.OS === 'android') {
-            try {
-                await Notifications.requestPermissionsAsync();
-                await Notifications.setNotificationChannelAsync('default', {
-                    name: 'Default',
-                    importance: Notifications.AndroidImportance.MAX,
-                    sound: 'default',
-                    vibrationPattern: [0, 250, 250, 250],
-                    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-                });
-            } catch (e) {
-                console.log('Error requesting notification permissions:', e);
-            }
-            try {
-                await Location.requestForegroundPermissionsAsync();
-            } catch (e) {
-                console.log('Error requesting location permissions:', e);
-            }
-        }
-
         showLoading('Đang đăng nhập...');
         try {
+            // Delay 1 xíu để UI kịp phản hồi trước khi hiện dialog xin quyền
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Request permissions on Android when clicking Login to improve app startup UX
+            if (Platform.OS === 'android') {
+                try {
+                    await Notifications.requestPermissionsAsync();
+                    await Notifications.setNotificationChannelAsync('default', {
+                        name: 'Default',
+                        importance: Notifications.AndroidImportance.MAX,
+                        sound: 'default',
+                        vibrationPattern: [0, 250, 250, 250],
+                        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+                    });
+                } catch (e) {
+                    console.log('Error requesting notification permissions:', e);
+                }
+                try {
+                    await Location.requestForegroundPermissionsAsync();
+                } catch (e) {
+                    console.log('Error requesting location permissions:', e);
+                }
+            }
+
             const result = await login({
                 username,
                 password,
@@ -163,31 +194,33 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         <View style={[styles.container, { backgroundColor: Colors.primary }]}>
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-            <KeyboardAwareScrollView
-                style={styles.keyboardView}
+            <ScrollView
+                ref={scrollViewRef}
+                style={[styles.keyboardView]}
                 contentContainerStyle={{ flexGrow: 1 }}
                 bounces={false}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
-                enableOnAndroid={true}
-                extraScrollHeight={100}
             >
-                {/* 1. Khoảng trống Spacer ở đầu */}
-                <View style={{ height: 50 }} />
+                {/* Blue Header Section */}
+                <View style={{ backgroundColor: Colors.primary }}>
+                    {/* 1. Khoảng trống Spacer ở đầu */}
+                    <View style={{ height: 100 }} />
 
-                {/* 2. Header Area */}
-                <View style={styles.headerArea}>
-                    <Animated.View style={{
-                        opacity: fadeAnim,
-                        transform: [{ translateY: slideAnim }],
-                        alignItems: 'center'
-                    }}>
-                        <View style={styles.logoContainer}>
-                            <Ionicons name="school" size={50} color="#fff" />
-                        </View>
-                        <Text style={styles.headerTitle}>Chào mừng bạn!</Text>
-                        <Text style={styles.headerSubtitle}>Đăng nhập để xem lịch học</Text>
-                    </Animated.View>
+                    {/* 2. Header Area */}
+                    <View style={styles.headerArea}>
+                        <Animated.View style={{
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }],
+                            alignItems: 'center'
+                        }}>
+                            <View style={styles.logoContainer}>
+                                <Ionicons name="school" size={50} color="#fff" />
+                            </View>
+                            <Text style={styles.headerTitle}>Chào mừng bạn!</Text>
+                            <Text style={styles.headerSubtitle}>Đăng nhập để xem lịch học</Text>
+                        </Animated.View>
+                    </View>
                 </View>
 
                 {/* 3. Form Container */}
@@ -261,7 +294,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                     >
                         <View style={styles.buttonContent}>
                             <Text style={styles.buttonText}>ĐĂNG NHẬP</Text>
-                            <MaterialIcons name="arrow-forward" size={20} color="#fff" />
                         </View>
                     </TouchableOpacity>
 
@@ -272,7 +304,9 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
                         </Text>
                     </View>
                 </View>
-            </KeyboardAwareScrollView>
+
+                {keyboardHeight > 0 && <View style={{ height: keyboardHeight - 10 }} />}
+            </ScrollView>
         </View>
     );
 }
@@ -285,7 +319,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     headerArea: {
-        height: height * 0.35,
+        height: height * 0.3,
         justifyContent: 'center',
         alignItems: 'center',
     },

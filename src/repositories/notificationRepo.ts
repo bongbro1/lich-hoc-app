@@ -116,6 +116,7 @@ export const notificationRepo = {
             return {
               id: item.id,
               studentId: d.studentId,
+              senderId: d.senderId,
               title: d.title ?? '',
               body: d.body ?? '',
               type: d.type ?? 'system',

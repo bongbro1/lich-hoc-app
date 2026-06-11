@@ -81,3 +81,7 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+
+# APK Output
+apk_release/
+*.apk

@@ -41,6 +41,7 @@ import {
 } from 'models/post';
 import { db, rtdb, storage } from 'configs/firebase';
 import { CommentModel } from 'models/comment';
+import { imgbbService } from 'services/imgbbService';
 
 const POSTS_COLLECTION = 'posts';
 
@@ -349,6 +350,7 @@ class PostRepo {
         user: data.user,
         content: data.content,
         timestamp: toIsoString(data.timestamp),
+        imageUrl: data.imageUrl ?? null,
         parentCommentId: data.parentCommentId ?? null,
         replies: [],
         reactions: [],
@@ -358,11 +360,16 @@ class PostRepo {
     return buildCommentTree(commentsFlat);
   }
 
+  async uploadCommentImage(postId: string, imageUri: string, commentId: string): Promise<string> {
+    return await imgbbService.uploadImage(imageUri, `comment_${postId}_${commentId}.jpg`);
+  }
+
   async addComment(params: {
     postId: string;
     user: UserPreviewModel;
     content: string;
     parentCommentId?: string | null;
+    imageUrl?: string | null;
   }): Promise<string> {
     const commentsRef = rtdbRef(rtdb, `postComments/${params.postId}`);
     const newCommentRef = push(commentsRef);
@@ -372,6 +379,15 @@ class PostRepo {
       throw new Error('Cannot create comment id');
     }
 
+    let uploadedImageUrl = null;
+    if (params.imageUrl) {
+      try {
+        uploadedImageUrl = await this.uploadCommentImage(params.postId, params.imageUrl, commentId);
+      } catch (uploadError) {
+        console.error('Failed to upload comment image:', uploadError);
+      }
+    }
+
     await set(newCommentRef, {
       id: commentId,
       postId: params.postId,
@@ -379,6 +395,7 @@ class PostRepo {
       content: params.content,
       parentCommentId: params.parentCommentId ?? null,
       timestamp: Date.now(),
+      imageUrl: uploadedImageUrl,
     });
 
     const countResult = await runTransaction(
@@ -501,6 +518,7 @@ class PostRepo {
           user: data.user,
           content: data.content,
           timestamp: toIsoString(data.timestamp),
+          imageUrl: data.imageUrl ?? null,
           parentCommentId: data.parentCommentId ?? null,
           replies: [],
           reactions: [],

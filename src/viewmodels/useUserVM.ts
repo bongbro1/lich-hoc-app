@@ -17,6 +17,8 @@ export const useUserVM = () => {
       setError('');
       const data = await userRepo.getProfile(studentId);
       setProfile(data);
+      setFriendsCount(data.following);
+      setFollowersCount(data.followers);
     } catch (e: any) {
       setError(e.message || 'Load profile failed');
     }
@@ -55,6 +57,16 @@ export const useUserVM = () => {
     });
   };
 
+  const updateProfile = async (studentId: string, updates: Partial<UserProfileModel>) => {
+    try {
+      setError('');
+      await userRepo.updateProfile(studentId, updates);
+      setProfile(prev => (prev ? { ...prev, ...updates } : prev));
+    } catch (e: any) {
+      setError(e.message || 'Update profile failed');
+    }
+  };
+
   return {
     profile,
     friendsCount,
@@ -66,5 +78,6 @@ export const useUserVM = () => {
     uploadAvatar,
     updateLastOnline,
     listenUserPresence,
+    updateProfile,
   };
 };

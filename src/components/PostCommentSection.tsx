@@ -10,18 +10,20 @@ import {
     View,
     Text,
     TextInput,
-    TouchableOpacity,
     StyleSheet,
-    Image,
     ScrollView,
+    Pressable
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useUser } from 'contexts/UserContext';
+import { useImageFullModal } from 'contexts/ImageFullModalContext';
 import { usePostVM } from 'viewmodels/usePostVM';
 import { formatTimeAgo } from 'utils/date';
 import { Colors } from 'utils/theme';
 import { SORT_OPTIONS, SortMode } from 'configs/constants';
+import * as ImagePicker from 'expo-image-picker';
 
 type ReplyTarget = {
     id?: string;
@@ -34,6 +36,166 @@ type Props = {
     onComposerFocus?: (input: TextInput | null) => void;
 };
 
+type CommentNodeProps = {
+    item: any;
+    level?: number;
+    currentUser: any;
+    navigation: any;
+    darkMode: boolean;
+    theme: any;
+    themedStyles: any;
+    handleReply: (item: any, name: string) => void;
+    handleDeleteComment: (commentId: string) => void;
+    openModal: (url: string) => void;
+};
+
+const CommentNode = React.memo(({
+    item,
+    level = 0,
+    currentUser,
+    navigation,
+    darkMode,
+    theme,
+    themedStyles,
+    handleReply,
+    handleDeleteComment,
+    openModal
+}: CommentNodeProps) => {
+    const name = item?.user?.name || 'Người dùng';
+    const avatar = item?.user?.avatar;
+    const content = item?.content || '';
+    const canDeleteComment =
+        !!currentUser?.studentId &&
+        currentUser.studentId === item?.user?.studentId;
+    const canReply = level < 2;
+    const time = item?.timestamp || 'Vừa xong';
+
+    const handleGoToProfile = () => {
+        if (item?.user?.studentId) {
+            navigation.navigate('ProfileFeedScreen', { studentId: item.user.studentId });
+        }
+    };
+
+    return (
+        <View>
+            <View style={[styles.commentRow, { paddingTop: level > 0 ? 12 : 16 }]}>
+                <Pressable
+                    style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+                    onPress={handleGoToProfile}
+                >
+                    <View style={[styles.avatarWrapper, { borderColor: Colors.primary + '15' }]}>
+                        {avatar ? (
+                            <Image
+                                source={{ uri: avatar }}
+                                style={level > 0 ? styles.avatarNested : styles.avatar}
+                                contentFit="cover"
+                                transition={200}
+                                cachePolicy="memory-disk"
+                            />
+                        ) : (
+                            <View style={[level > 0 ? styles.avatarNested : styles.avatar, styles.avatarFallback]}>
+                                <Ionicons name="person" size={12} color="#fff" />
+                            </View>
+                        )}
+                    </View>
+                </Pressable>
+
+                <View style={styles.commentContentWrap}>
+                    {content.trim() ? (
+                        <View style={[styles.commentBubble, themedStyles.commentBubble]}>
+                            <Pressable
+                                style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+                                onPress={handleGoToProfile}
+                            >
+                                <Text style={[styles.commentName, { color: theme.text }]}>{name}</Text>
+                            </Pressable>
+                            <Text style={[styles.commentText, { color: darkMode ? '#CBD5E1' : '#1F2937' }]}>{content}</Text>
+                        </View>
+                    ) : (
+                        <View style={{ paddingLeft: 4, marginBottom: 2 }}>
+                            <Pressable
+                                style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+                                onPress={handleGoToProfile}
+                            >
+                                <Text style={[styles.commentName, { color: theme.text }]}>{name}</Text>
+                            </Pressable>
+                        </View>
+                    )}
+
+                    {item.imageUrl ? (
+                        <Pressable
+                            onPress={() => openModal(item.imageUrl)}
+                            style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+                        >
+                            <View style={[styles.commentImageContainer, { borderColor: theme.border }]}>
+                                <Image
+                                    source={{ uri: item.imageUrl }}
+                                    style={styles.commentImage}
+                                    contentFit="cover"
+                                    transition={200}
+                                    cachePolicy="memory-disk"
+                                />
+                            </View>
+                        </Pressable>
+                    ) : null}
+
+                    <View style={styles.commentMetaRow}>
+                        <Pressable
+                            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+                        >
+                            <Text style={[styles.metaAction, { color: theme.textMuted }]}>Thích</Text>
+                        </Pressable>
+
+                        <Pressable
+                            onPress={() => handleReply(item, name)}
+                            disabled={!canReply}
+                            style={({ pressed }) => [
+                                !canReply ? { display: 'none' } : undefined,
+                                { opacity: pressed ? 0.6 : 1 }
+                            ]}
+                        >
+                            <Text style={[styles.metaAction, { color: theme.textMuted }]}>Phản hồi</Text>
+                        </Pressable>
+
+                        <Text style={[styles.metaText, { color: theme.textMuted }]}>{formatTimeAgo(time)}</Text>
+
+                        {canDeleteComment && (
+                            <Pressable
+                                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+                                onPress={() => handleDeleteComment(item?.id)}
+                            >
+                                <Text style={[styles.metaAction, { color: '#ba1a1a', fontWeight: '400' }]}>
+                                    Xóa
+                                </Text>
+                            </Pressable>
+                        )}
+                    </View>
+
+                    {!!item?.replies?.length && (
+                        <View style={{ marginTop: 0 }}>
+                            {item.replies.map((reply: any) => (
+                                <CommentNode
+                                    key={reply.id?.toString() || `${item?.id}-reply`}
+                                    item={reply}
+                                    level={level + 1}
+                                    currentUser={currentUser}
+                                    navigation={navigation}
+                                    darkMode={darkMode}
+                                    theme={theme}
+                                    themedStyles={themedStyles}
+                                    handleReply={handleReply}
+                                    handleDeleteComment={handleDeleteComment}
+                                    openModal={openModal}
+                                />
+                            ))}
+                        </View>
+                    )}
+                </View>
+            </View>
+        </View>
+    );
+});
+
 export type PostCommentSectionRef = {
     focusComposer: () => void;
 };
@@ -42,27 +204,60 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
     ({ postId, postOwnerId, onComposerFocus }, ref) => {
         const navigation = useNavigation<any>();
         const { user: currentUser } = useUser();
+        const { openModal } = useImageFullModal();
         const { addComment, deleteComment, subscribeComments } = usePostVM();
 
         const commentsScrollRef = useRef<ScrollView>(null);
         const commentInputRef = useRef<TextInput>(null);
 
         const { darkMode } = useUser();
-        const theme = {
-            bg: darkMode ? '#1E293B' : '#fff',
-            text: darkMode ? '#F8FAFC' : '#0F172A',
-            textMuted: darkMode ? '#94A3B8' : '#64748B',
-            border: darkMode ? '#334155' : '#F1F5F9',
+        const theme = useMemo(() => ({
+            bg: darkMode ? '#1E293B' : '#faf8ff', // matches surface bg
+            text: darkMode ? '#F8FAFC' : '#191b24', // on-surface
+            textMuted: darkMode ? '#94A3B8' : '#5c5f61', // secondary
+            border: darkMode ? '#334155' : '#c2c6d8', // outline-variant
             input: darkMode ? '#334155' : '#F3F4F6',
-            bubble: darkMode ? '#334155' : '#F3F4F6',
-        };
+            bubble: darkMode ? '#334155' : '#e0e3e6', // secondary-container
+        }), [darkMode]);
+
+        const themedStyles = useMemo(() => StyleSheet.create({
+            wrapper: {
+                borderColor: theme.border,
+            },
+            optionMenu: {
+                backgroundColor: theme.bg,
+                borderColor: theme.border,
+                borderWidth: darkMode ? 1 : 0.5,
+            },
+            commentBubble: {
+                backgroundColor: theme.bubble,
+            },
+            inputBox: {
+                backgroundColor: theme.input,
+                borderColor: theme.border,
+                borderWidth: 0.5,
+            }
+        }), [theme, darkMode]);
 
         const [comments, setComments] = useState<any[]>([]);
         const [newComment, setNewComment] = useState('');
+        const [selectedImage, setSelectedImage] = useState<string | null>(null);
         const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
         const [expanded, setExpanded] = useState(false);
         const [sortMode, setSortMode] = useState<'top' | 'newest' | 'all'>('top');
         const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+        const handlePickImage = async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                setSelectedImage(result.assets[0].uri);
+            }
+        };
 
         const scrollCommentsToBottom = (animated = true) => {
             commentsScrollRef.current?.scrollToEnd({ animated });
@@ -143,7 +338,7 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
         };
 
         const handleAddComment = async () => {
-            if (!newComment.trim() || !currentUser) return;
+            if ((!newComment.trim() && !selectedImage) || !currentUser) return;
 
             try {
                 const content = newComment;
@@ -151,8 +346,10 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
                     ? findCommentById(comments, replyTarget.id)
                     : null;
                 const parentCommentOwnerId = parentComment?.user?.studentId;
+                const img = selectedImage;
 
                 setNewComment('');
+                setSelectedImage(null);
                 setReplyTarget(null);
 
                 const result = await addComment(
@@ -165,7 +362,8 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
                     },
                     content,
                     replyTarget?.id,
-                    parentCommentOwnerId
+                    parentCommentOwnerId,
+                    img
                 );
 
                 if (!result.success) {
@@ -199,91 +397,18 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
             setTimeout(focusComposer, 60);
         };
 
-        const CommentNode = ({ item, level = 0 }: any) => {
-            const name = item?.user?.name || 'Người dùng';
-            const avatar = item?.user?.avatar;
-            const content = item?.content || '';
-            const canDeleteComment =
-                !!currentUser?.studentId &&
-                currentUser.studentId === item?.user?.studentId;
-            const canReply = level < 2;
-            const time = item?.timestamp || 'Vừa xong';
-
-            const handleGoToProfile = () => {
-                if (item?.user?.studentId) {
-                    navigation.navigate('ProfileFeedScreen', { studentId: item.user.studentId });
-                }
-            };
-
-            return (
-                <View style={{ marginLeft: level > 0 ? 16 : 0, marginTop: 6 }}>
-                    <View style={styles.commentRow}>
-                        <TouchableOpacity activeOpacity={0.7} onPress={handleGoToProfile}>
-                            {avatar ? (
-                                <Image source={{ uri: avatar }} style={styles.avatar} />
-                            ) : (
-                                <View style={[styles.avatar, styles.avatarFallback]}>
-                                    <Ionicons name="person" size={14} color="#fff" />
-                                </View>
-                            )}
-                        </TouchableOpacity>
-
-                        <View style={styles.commentContentWrap}>
-                            <View style={[styles.commentBubble, { backgroundColor: theme.bubble }]}>
-                                <TouchableOpacity activeOpacity={0.7} onPress={handleGoToProfile}>
-                                    <Text style={[styles.commentName, { color: theme.text }]}>{name}</Text>
-                                </TouchableOpacity>
-                                <Text style={[styles.commentText, { color: darkMode ? '#CBD5E1' : '#1F2937' }]}>{content}</Text>
-                            </View>
-
-                            <View style={styles.commentMetaRow}>
-                                <Text style={[styles.metaText, { color: theme.textMuted }]}>{formatTimeAgo(time)}</Text>
-
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        onPress={() => handleReply(item, name)}
-                                        disabled={!canReply}
-                                        style={!canReply ? { display: 'none' } : undefined}
-                                    >
-                                        <Text style={[styles.metaAction, { color: theme.textMuted }]}>Phản hồi</Text>
-                                    </TouchableOpacity>
-
-                                {canDeleteComment && (
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        onPress={() => handleDeleteComment(item?.id)}
-                                    >
-                                        <Text style={[styles.metaAction, { color: '#EF4444' }]}>
-                                            Xóa
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-
-                            {!!item?.replies?.length && (
-                                <View style={{ marginTop: 6 }}>
-                                    {item.replies.map((reply: any) => (
-                                        <CommentNode
-                                            key={reply.id?.toString() || `${item?.id}-reply`}
-                                            item={reply}
-                                            level={level + 1}
-                                        />
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-                    </View>
-                </View>
-            );
-        };
-
         return (
-            <View style={[styles.wrapper, { backgroundColor: theme.bg }]}>
+            <View style={[styles.wrapper, themedStyles.wrapper, { backgroundColor: theme.bg }]}>
                 <View style={styles.filterRow}>
                     <View style={{ position: 'relative' }}>
-                        <TouchableOpacity
-                            activeOpacity={0.85}
-                            style={[styles.filterChip, { backgroundColor: theme.bubble }]}
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.filterChip,
+                                {
+                                    backgroundColor: theme.bubble,
+                                    transform: [{ scale: pressed ? 0.98 : 1 }]
+                                }
+                            ]}
                             onPress={() => setShowFilterMenu((prev) => !prev)}
                         >
                             <Text style={[styles.filterChipText, { color: theme.text }]}>{filterLabel}</Text>
@@ -292,21 +417,23 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
                                 size={14}
                                 color={theme.textMuted}
                             />
-                        </TouchableOpacity>
+                        </Pressable>
 
                         {showFilterMenu && (
                             <>
-                                <TouchableOpacity
-                                    activeOpacity={1}
+                                <Pressable
                                     style={styles.optionOverlay}
                                     onPress={() => setShowFilterMenu(false)}
                                 />
 
-                                <View style={[styles.optionMenu, { backgroundColor: theme.bg, borderColor: theme.border, borderWidth: darkMode ? 1 : 0 }]}>
+                                <View style={[styles.optionMenu, themedStyles.optionMenu]}>
                                     {Object.entries(SORT_OPTIONS).map(([key, label]) => (
-                                        <TouchableOpacity
+                                        <Pressable
                                             key={key}
-                                            style={styles.optionItem}
+                                            style={({ pressed }) => [
+                                                styles.optionItem,
+                                                { backgroundColor: pressed ? (darkMode ? '#33415550' : '#F1F5F9') : 'transparent' }
+                                            ]}
                                             onPress={() => {
                                                 setSortMode(key as SortMode);
                                                 setShowFilterMenu(false);
@@ -321,7 +448,7 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
                                             >
                                                 {label}
                                             </Text>
-                                        </TouchableOpacity>
+                                        </Pressable>
                                     ))}
                                 </View>
                             </>
@@ -329,14 +456,14 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
                     </View>
 
                     {comments.length > 5 && (
-                        <TouchableOpacity
-                            activeOpacity={0.85}
+                        <Pressable
+                            style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
                             onPress={() => setExpanded((prev) => !prev)}
                         >
                             <Text style={styles.expandText}>
                                 {expanded ? 'Ẩn bớt' : 'Xem thêm'}
                             </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     )}
                 </View>
 
@@ -351,7 +478,17 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
                         {visibleComments.length > 0 ? (
                             visibleComments.map((item, index) => (
                                 <View key={item?.id?.toString?.() || String(index)}>
-                                    <CommentNode item={item} />
+                                    <CommentNode
+                                        item={item}
+                                        currentUser={currentUser}
+                                        navigation={navigation}
+                                        darkMode={darkMode}
+                                        theme={theme}
+                                        themedStyles={themedStyles}
+                                        handleReply={handleReply}
+                                        handleDeleteComment={handleDeleteComment}
+                                        openModal={openModal}
+                                    />
                                 </View>
                             ))
                         ) : (
@@ -371,20 +508,36 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
                             <Text style={styles.replyName}>{replyTarget.name}</Text>
                         </Text>
 
-                        <TouchableOpacity
-                            activeOpacity={0.7}
+                        <Pressable
                             onPress={() => setReplyTarget(null)}
-                            style={styles.replyCloseBtn}
+                            style={({ pressed }) => [styles.replyCloseBtn, { opacity: pressed ? 0.8 : 1 }]}
                         >
                             <Ionicons name="close" size={12} color="#fff" />
-                        </TouchableOpacity>
+                        </Pressable>
                     </View>
                 )}
 
                 <View style={styles.inputOuter}>
-                    <View style={[styles.inputBox, { backgroundColor: theme.input, borderColor: theme.border }]}>
+                    {selectedImage && (
+                        <View style={[styles.commentImagePreviewWrap, { borderColor: theme.border }]}>
+                            <Image
+                                source={{ uri: selectedImage }}
+                                style={styles.commentImagePreview}
+                                contentFit="cover"
+                            />
+                            <Pressable
+                                style={styles.closePreviewBtn}
+                                onPress={() => setSelectedImage(null)}
+                            >
+                                <Ionicons name="close" size={12} color="#fff" />
+                            </Pressable>
+                        </View>
+                    )}
+
+                    <View style={[styles.inputBox, themedStyles.inputBox]}>
                         <TextInput
                             ref={commentInputRef}
+                            autoFocus={true}
                             placeholder={
                                 replyTarget
                                     ? `Phản hồi ${replyTarget.name}...`
@@ -401,17 +554,29 @@ const PostCommentSection = forwardRef<PostCommentSectionRef, Props>(
                             }}
                         />
 
-                        <TouchableOpacity
-                            activeOpacity={0.85}
-                            onPress={handleAddComment}
-                            style={[
-                                styles.sendBtn,
-                                { opacity: newComment.trim() ? 1 : 0.5 },
+                        <Pressable
+                            onPress={handlePickImage}
+                            style={({ pressed }) => [
+                                styles.cameraBtn,
+                                { transform: [{ scale: pressed ? 0.95 : 1 }] }
                             ]}
-                            disabled={!newComment.trim()}
                         >
-                            <Ionicons name="send" size={16} color="#fff" />
-                        </TouchableOpacity>
+                            <Ionicons name="camera-outline" size={22} color={theme.textMuted} />
+                        </Pressable>
+
+                        <Pressable
+                            onPress={handleAddComment}
+                            style={({ pressed }) => [
+                                styles.sendBtn,
+                                {
+                                    opacity: (newComment.trim() || selectedImage) ? 1 : 0.5,
+                                    transform: [{ scale: pressed ? 0.95 : 1 }]
+                                },
+                            ]}
+                            disabled={!newComment.trim() && !selectedImage}
+                        >
+                            <Ionicons name="send" size={14} color="#fff" />
+                        </Pressable>
                     </View>
                 </View>
             </View>
@@ -431,15 +596,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#F3F4F6',
-        borderRadius: 16,
+        borderRadius: 12,
+        borderCurve: 'continuous',
         paddingHorizontal: 10,
         paddingVertical: 6,
+        gap: 4,
     },
     filterChipText: {
         fontSize: 13,
         fontWeight: '600',
         color: '#374151',
-        marginRight: 4,
     },
     expandText: {
         fontSize: 13,
@@ -460,8 +626,8 @@ const styles = StyleSheet.create({
         top: 38,
         left: 0,
         width: 180,
-        backgroundColor: '#fff',
-        borderRadius: 12,
+        borderRadius: 10,
+        borderCurve: 'continuous',
         paddingVertical: 6,
         shadowColor: '#000',
         shadowOpacity: 0.12,
@@ -482,9 +648,10 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     wrapper: {
-        marginTop: 4,
-        paddingTop: 8,
-        backgroundColor: Colors.white,
+        // marginTop: 4,
+        padding: 8,
+        marginHorizontal: -12,
+        borderTopWidth: 0.5,
     },
     emptyWrap: {
         paddingVertical: 14,
@@ -497,14 +664,24 @@ const styles = StyleSheet.create({
     commentRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        paddingVertical: 6,
     },
-    avatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+    avatarWrapper: {
+        borderRadius: 20,
+        borderCurve: 'continuous',
+        borderWidth: 1,
+        padding: 1.5,
         marginRight: 8,
         marginTop: 2,
+    },
+    avatar: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+    },
+    avatarNested: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
     },
     avatarFallback: {
         backgroundColor: '#94A3B8',
@@ -515,8 +692,8 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     commentBubble: {
-        backgroundColor: '#F3F4F6',
-        borderRadius: 16,
+        borderRadius: 12,
+        borderCurve: 'continuous',
         paddingHorizontal: 12,
         paddingVertical: 8,
     },
@@ -544,9 +721,9 @@ const styles = StyleSheet.create({
     },
     metaAction: {
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: '700',
         color: Colors.subText,
-        marginRight: 12,
+        marginRight: 16,
     },
     replyBadge: {
         flexDirection: 'row',
@@ -585,10 +762,8 @@ const styles = StyleSheet.create({
     inputBox: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-        backgroundColor: '#F3F4F6',
-        borderRadius: 22,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderRadius: 14,
+        borderCurve: 'continuous',
         paddingLeft: 12,
         paddingRight: 6,
         paddingVertical: 6,
@@ -610,6 +785,52 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginLeft: 4,
+    },
+    commentImageContainer: {
+        marginTop: 6,
+        alignSelf: 'flex-start',
+        borderRadius: 8,
+        borderCurve: 'continuous',
+        overflow: 'hidden',
+        borderWidth: 0.5,
+    },
+    commentImage: {
+        width: 140,
+        height: 140,
+        backgroundColor: '#F1F5F9',
+    },
+    commentImagePreviewWrap: {
+        flexDirection: 'row',
+        alignSelf: 'flex-start',
+        borderRadius: 8,
+        borderCurve: 'continuous',
+        overflow: 'hidden',
+        borderWidth: 1,
+        marginBottom: 8,
+        position: 'relative',
+    },
+    commentImagePreview: {
+        width: 80,
+        height: 80,
+        backgroundColor: '#F1F5F9',
+    },
+    closePreviewBtn: {
+        position: 'absolute',
+        top: 4,
+        right: 4,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+    },
+    cameraBtn: {
+        padding: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 4,
     },
 });
 

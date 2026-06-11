@@ -12,6 +12,7 @@ export const SCREENS = {
   DASHBOARD: 'Dashboard',
   CHATS: 'Chats',
   NOTIFICATIONS: 'Notifications',
+  NOTIFICATION_DETAIL: 'NotificationDetailScreen',
   SETTINGS: 'Settings',
   SETTINGS_MAIN: 'SettingsMain',
   HELP_CENTER: 'HelpCenter',
@@ -24,6 +25,8 @@ export const SCREENS = {
   FRIENDS_NEARBY: 'FriendsNearbyScreen',
   FRIENDS: 'FriendsScreen',
   PROFILE_FEED: 'ProfileFeedScreen',
+  EDIT_PROFILE_DETAILS: 'EditProfileDetailsScreen',
+  CREATE_STORY: 'CreateStoryScreen',
   COMMENT: 'CommentScreen',
   WEATHER: 'WeatherScreen',
 
@@ -31,6 +34,7 @@ export const SCREENS = {
   CHAT_TAB: 'ChatTab',
   CHAT_DETAIL: 'ChatDetailScreen',
   IMAGE_PICKER: 'ImagePickerScreen',
+  CREATE_NOTE: 'CreateNoteScreen',
 
   // Root Stack
   LOGIN: 'Login',

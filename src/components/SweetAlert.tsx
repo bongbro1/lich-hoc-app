@@ -137,7 +137,7 @@ export default function SweetAlert({
           }]}>
             <MaterialCommunityIcons
               name={config.icon as any}
-              size={44}
+              size={32}
               color={config.color}
             />
           </View>
@@ -155,7 +155,7 @@ export default function SweetAlert({
                 style={({ pressed }) => [
                   styles.btn,
                   styles.btnCancel,
-                  { 
+                  {
                     backgroundColor: darkMode ? '#334155' : '#F3F4F6',
                     transform: [{ scale: pressed ? 0.96 : 1 }]
                   }
@@ -171,7 +171,7 @@ export default function SweetAlert({
                 style={({ pressed }) => [
                   styles.btn,
                   styles.btnConfirm,
-                  { 
+                  {
                     backgroundColor: config.color,
                     transform: [{ scale: pressed ? 0.96 : 1 }]
                   }
@@ -197,45 +197,46 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   card: {
-    borderRadius: 22,
-    paddingTop: 28,
-    paddingBottom: 22,
-    paddingHorizontal: 24,
+    borderRadius: 18,
+    paddingTop: 22,
+    paddingBottom: 18,
+    paddingHorizontal: 20,
     alignItems: "center",
-    width: "82%",
+    width: "78%",
+    maxWidth: 320,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 8,
   },
   iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: "#111827",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   message: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
     textAlign: "center",
-    lineHeight: 21,
-    marginBottom: 4,
+    lineHeight: 18,
+    marginBottom: 2,
   },
   actions: {
     flexDirection: "row",
-    marginTop: 22,
-    gap: 10,
+    marginTop: 18,
+    gap: 8,
     width: "100%",
   },
   actionsSingle: {
@@ -243,8 +244,8 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
   },
   btnCancelText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#374151",
   },
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
     // backgroundColor set dynamically
   },
   btnConfirmText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: "#fff",
   },

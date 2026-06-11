@@ -197,7 +197,8 @@ export const usePostVM = (studentId?: string) => {
       user: UserPreviewModel,
       content: string,
       parentCommentId?: string | null,
-      parentCommentOwnerId?: string
+      parentCommentOwnerId?: string,
+      imageUrl?: string | null
     ) => {
       try {
         setSubmitting(true);
@@ -208,6 +209,7 @@ export const usePostVM = (studentId?: string) => {
           user,
           content,
           parentCommentId,
+          imageUrl,
         });
 
         const receiverId = parentCommentId

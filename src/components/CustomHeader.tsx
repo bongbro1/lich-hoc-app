@@ -36,7 +36,7 @@ function CustomHeader({
     };
 
     return (
-        <View style={[styles.headerContainer, { paddingTop: insets.top + 8, backgroundColor: theme.header }]}>
+        <View style={[styles.headerContainer, { paddingTop: insets.top + 10, backgroundColor: theme.header }]}>
             <View style={styles.leftSection}>
                 <Avatar.Text
                     size={48}
@@ -77,8 +77,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 25,
+        paddingBottom: 18,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
         shadowColor: '#000',

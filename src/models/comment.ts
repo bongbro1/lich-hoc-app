@@ -21,6 +21,7 @@ export interface CommentModel {
   user: UserPreviewModel;
   content: string;
   timestamp: string;
+  imageUrl?: string | null;
 
   parentCommentId?: string | null;
   replies: CommentModel[];

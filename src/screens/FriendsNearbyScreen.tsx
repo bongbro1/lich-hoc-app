@@ -16,7 +16,7 @@ import {
   Modal,
   InteractionManager,
 } from "react-native";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import { MaterialIcons as Icon } from "@expo/vector-icons";
 import SimpleHeader from "../components/SimpleHeader";
 import { useAlert } from "../contexts/AlertContext";
 import { useImageFullModal } from "../contexts/ImageFullModalContext";

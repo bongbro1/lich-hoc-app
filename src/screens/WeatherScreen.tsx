@@ -28,7 +28,7 @@ const ForecastDetailItem = React.memo(({ time, temp, humidity, code, theme, dark
     const Icon = iconInfo.icon;
 
     return (
-        <View style={[styles.detailItem, { borderBottomColor: darkMode ? '#1E293B' : '#F1F5F9' }]}>
+        <View style={[styles.detailItem, { borderBottomColor: theme.border }]}>
             <Text style={[styles.detailTime, { color: theme.text }]}>{h}:00</Text>
             <View style={styles.detailMain}>
                 <Icon size={24} color={iconInfo.color} weight="duotone" />
@@ -140,6 +140,7 @@ export default function WeatherScreen({ navigation }: any) {
         card: darkMode ? '#1E293B' : '#FFFFFF',
         text: darkMode ? '#F8FAFC' : '#1E293B',
         textMuted: darkMode ? '#94A3B8' : '#64748B',
+        border: darkMode ? '#334155' : '#E2E8F0',
         primary: Colors.primary,
         gradient: darkMode ? ['#1E293B', '#0F172A'] : [Colors.primary, '#6366F1'],
     };
@@ -239,7 +240,7 @@ export default function WeatherScreen({ navigation }: any) {
                                     <MapPin size={16} color="#FFF" weight="fill" />
                                     <ScrollingText text={locationName} style={styles.locationText} />
                                 </View>
-                                <Pressable onPress={loadWeather} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]} disabled={loading}>
+                                <Pressable onPress={() => loadWeather(true)} style={({ pressed }) => [styles.backBtn, { opacity: pressed ? 0.7 : 1 }]} disabled={loading}>
                                     {loading ? (
                                         <ActivityIndicator size="small" color="#FFF" />
                                     ) : (
@@ -307,7 +308,7 @@ export default function WeatherScreen({ navigation }: any) {
                                 ref={forecastScrollRef}
                                 horizontal
                                 showsHorizontalScrollIndicator={false}
-                                style={[styles.forecastCard, { backgroundColor: theme.card }]}
+                                style={[styles.forecastCard, { backgroundColor: theme.card, borderColor: theme.border }]}
                                 contentContainerStyle={{ paddingRight: 20 }}
                             >
                                 {weatherData?.hourly?.time?.slice(0, 24).map((time: string, idx: number) => {
@@ -327,7 +328,7 @@ export default function WeatherScreen({ navigation }: any) {
                                             style={[
                                                 styles.forecastItem,
                                                 isSelected && styles.activeForecast,
-                                                isSelected && { backgroundColor: theme.primary + '15' }
+                                                isSelected && { backgroundColor: theme.primary + '15', borderColor: theme.primary + '40' }
                                             ]}
                                         >
                                             <Text style={[styles.forecastTime, { color: isSelected ? theme.primary : theme.text, fontWeight: isSelected ? '700' : '400' }]}>
@@ -346,7 +347,7 @@ export default function WeatherScreen({ navigation }: any) {
                                 <Text style={[styles.sectionTitle, { color: theme.text }]}>Dự báo 7 ngày tới</Text>
                             </View>
 
-                            <View style={[styles.weeklyCard, { backgroundColor: theme.card }]}>
+                            <View style={[styles.weeklyCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                                 {weatherData?.daily?.time?.map((time: string, idx: number) => {
                                     const date = new Date(time);
                                     const dayName = idx === 0 ? 'Hôm nay' : days[date.getDay()];
@@ -357,7 +358,7 @@ export default function WeatherScreen({ navigation }: any) {
                                     const minTemp = weatherData.daily.temperature_2m_min[idx];
 
                                     return (
-                                        <View key={idx} style={[styles.weeklyItem, idx !== 6 && { borderBottomWidth: 1, borderBottomColor: theme.bg }]}>
+                                        <View key={idx} style={[styles.weeklyItem, idx !== 6 && { borderBottomWidth: 0.5, borderBottomColor: theme.border }]}>
                                             <Text style={[styles.weeklyDay, { color: theme.text }]}>{dayName}</Text>
                                             <View style={styles.weeklyIconContainer}>
                                                 <Icon size={22} color={iconInfo.color} weight="duotone" />
@@ -399,6 +400,7 @@ export default function WeatherScreen({ navigation }: any) {
                                     styles.modalContent,
                                     {
                                         backgroundColor: theme.bg,
+                                        borderColor: theme.border,
                                         transform: [{ translateY: sheetAnim }]
                                     }
                                 ]}
@@ -573,7 +575,9 @@ const styles = StyleSheet.create({
     forecastCard: {
         flexDirection: 'row',
         padding: 16,
-        borderRadius: 20,
+        borderRadius: 12,
+        borderCurve: 'continuous',
+        borderWidth: 0.5,
         marginBottom: 24,
         ...Platform.select({
             ios: {
@@ -591,12 +595,12 @@ const styles = StyleSheet.create({
         width: 80,
         alignItems: 'center',
         paddingVertical: 12,
-        borderRadius: 12,
+        borderRadius: 8,
+        borderCurve: 'continuous',
         marginRight: 8,
     },
     activeForecast: {
-        borderWidth: 1,
-        borderColor: 'rgba(99, 102, 241, 0.2)',
+        borderWidth: 0.5,
     },
     forecastTime: {
         fontSize: 13,
@@ -607,7 +611,9 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     weeklyCard: {
-        borderRadius: 20,
+        borderRadius: 12,
+        borderCurve: 'continuous',
+        borderWidth: 0.5,
         padding: 8,
         marginBottom: 24,
         ...Platform.select({
@@ -666,8 +672,9 @@ const styles = StyleSheet.create({
     },
     infoBox: {
         padding: 20,
-        borderRadius: 16,
-        borderWidth: 1,
+        borderRadius: 12,
+        borderCurve: 'continuous',
+        borderWidth: 0.5,
     },
     infoTitle: {
         fontSize: 15,
@@ -798,8 +805,10 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        borderCurve: 'continuous',
+        borderWidth: 0.5,
         height: '80%',
         padding: 24,
         zIndex: 100,
@@ -818,7 +827,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 16,
-        borderBottomWidth: 1,
+        borderBottomWidth: 0.5,
     },
     detailTime: {
         fontSize: 15,

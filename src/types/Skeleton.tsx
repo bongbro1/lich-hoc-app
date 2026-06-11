@@ -3,7 +3,7 @@ import { Animated, StyleSheet } from "react-native";
 
 interface SkeletonProps {
   width?: number | string;
-  height?: number;
+  height?: number | string;
   radius?: number;
   style?: any;
 }

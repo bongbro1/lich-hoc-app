@@ -4,6 +4,7 @@ export interface ProfileFeedScreenProps {
   route: {
     params: {
       studentId: string;
+      initialProfile?: any;
     };
   };
   navigation: any;

@@ -171,15 +171,15 @@ function SubjectCard({ item, index }: { item: Subject_Mark; index: number }) {
     const isFail = item.rank === 'KHONG_DAT';
     const letterColor = getLetterColor(item.letter);
     return (
-        <MotiView 
+        <MotiView
             from={{ opacity: 0, translateY: 20 }}
             animate={{ opacity: 1, translateY: 0 }}
             transition={{ type: 'spring', delay: index * 50 }}
             style={[
-            styles.subjectCard,
-            { backgroundColor: theme.card, borderColor: theme.border, borderWidth: darkMode ? 1 : 0 },
-            isFail && styles.subjectCardFail
-        ]}>
+                styles.subjectCard,
+                { backgroundColor: theme.card, borderColor: theme.border, borderWidth: darkMode ? 1 : 0 },
+                isFail && styles.subjectCardFail
+            ]}>
             {/* Subject name + rank badge */}
             <View style={styles.subjectHeader}>
                 <View style={[styles.indexBadge, { backgroundColor: theme.box }]}>
@@ -337,7 +337,6 @@ export default function GradesScreen() {
             {/* GPA highlight */}
             <View style={[styles.gpaCard, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: darkMode ? 1 : 0 }]}>
                 <View style={styles.gpaLeft}>
-                    <Trophy size={22} color={gpaColor} weight="fill" />
                     <View style={{ marginLeft: 10 }}>
                         <Text style={[styles.gpaLabel, { color: theme.text }]}>Điểm trung bình tích lũy</Text>
                         <Text style={[styles.gpaSubLabel, { color: theme.textMuted }]}>Thang điểm 4</Text>

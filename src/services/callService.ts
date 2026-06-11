@@ -1,4 +1,14 @@
-import firestore, { Filter } from "@react-native-firebase/firestore";
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  serverTimestamp 
+} from "firebase/firestore";
+import { db } from "../configs/firebase";
 import { firebaseChatService } from "./firebaseChatService";
 
 export type CallStatus = "ringing" | "accepted" | "ended";
@@ -24,43 +34,34 @@ export const createCall = async (
   conversationId: string,
   callType: 'audio' | 'video'
 ) => {
-  await firestore()
-    .collection("calls")
-    .doc(callId)
-    .set({
-      callId,
-      callerId,
-      calleeId,
-      conversationId,
-      channel: callId,
-      status: "ringing",
-      callType,
-      createdAt: firestore.FieldValue.serverTimestamp(),
-    });
+  await setDoc(doc(db, "calls", callId), {
+    callId,
+    callerId,
+    calleeId,
+    conversationId,
+    channel: callId,
+    status: "ringing",
+    callType,
+    createdAt: serverTimestamp(),
+  });
 };
 
 /* =========================
    ACCEPT CALL (Callee)
 ========================= */
 export const acceptCall = async (callId: string) => {
-  await firestore()
-    .collection("calls")
-    .doc(callId)
-    .update({
-      status: "accepted",
-    });
+  await updateDoc(doc(db, "calls", callId), {
+    status: "accepted",
+  });
 };
 
 /* =========================
    END / DECLINE CALL
 ========================= */
 export const endCall = async (callId: string) => {
-  await firestore()
-    .collection("calls")
-    .doc(callId)
-    .update({
-      status: "ended",
-    });
+  await updateDoc(doc(db, "calls", callId), {
+    status: "ended",
+  });
 };
 
 /* =========================
@@ -70,16 +71,13 @@ export const listenCall = (
   callId: string,
   callback: (data: CallData | null) => void
 ) => {
-  return firestore()
-    .collection("calls")
-    .doc(callId)
-    .onSnapshot((doc) => {
-      if (!doc.exists) {
-        callback(null);
-        return;
-      }
-      callback(doc.data() as CallData);
-    });
+  return onSnapshot(doc(db, "calls", callId), (docSnap) => {
+    if (!docSnap.exists()) {
+      callback(null);
+      return;
+    }
+    callback(docSnap.data() as CallData);
+  });
 };
 
 /* =========================
@@ -89,21 +87,19 @@ export const listenIncomingCall = (
   userId: string,
   onIncoming: (call: CallData) => void
 ) => {
-  return firestore()
-    .collection("calls")
-    .where(
-      Filter.and(
-        Filter("calleeId", "==", userId),
-        Filter("status", "==", "ringing")
-      )
-    )
-    .onSnapshot(snapshot => {
-      snapshot.docChanges().forEach(change => {
-        if (change.type === "added") {
-          onIncoming(change.doc.data() as CallData);
-        }
-      });
+  const q = query(
+    collection(db, "calls"),
+    where("calleeId", "==", userId),
+    where("status", "==", "ringing")
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === "added") {
+        onIncoming(change.doc.data() as CallData);
+      }
     });
+  });
 };
 
 export const updateDurationCall = async (

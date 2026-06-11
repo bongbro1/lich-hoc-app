@@ -13,13 +13,14 @@ export type ChatStackParamList = {
     __from?: string;
   };
   ImagePickerScreen: undefined;
+  CreateNoteScreen: undefined;
 };
 
-// Tab chính
 export type RootTabParamList = {
   Home: undefined;
   Dashboard: undefined;
   Chats: NavigatorScreenParams<ChatStackParamList>;
+  Notifications: NavigatorScreenParams<NotificationStackParamList>;
   Settings: NavigatorScreenParams<SettingsStackParamList>;
 };
 
@@ -27,6 +28,17 @@ export type SettingsStackParamList = {
   SettingsMain: undefined;
   HelpCenter: undefined;
   About: undefined;
+};
+
+export type NotificationStackParamList = {
+  NotificationsMain: undefined;
+  NotificationDetailScreen: {
+    notification: import('../models/notification').NotificationModel;
+  };
+  PostDetailScreen: {
+    postId: string;
+    focusComment?: boolean;
+  };
 };
 
 // Stack root
@@ -74,6 +86,11 @@ export type DashboardStackParamList = {
   FriendsScreen: undefined;
   ProfileFeedScreen: {
     studentId: string;
+  };
+  CreateStoryScreen: undefined;
+  EditProfileDetailsScreen: {
+    studentId: string;
+    initialProfile?: any;
   };
   CommentScreen: {
     postId?: string;

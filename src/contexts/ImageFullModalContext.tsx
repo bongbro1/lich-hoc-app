@@ -4,6 +4,11 @@ import { ImageFullModal } from "../components/ImageFullModal";
 export type ImageFullModalOptions = {
   editableType?: "avatar" | "cover";
   onRequestChange?: () => void;
+  isStory?: boolean;
+  userName?: string | null;
+  userAvatar?: string | null;
+  storyTimestamps?: (string | undefined)[];
+  onDeleteStory?: (index: number) => void;
 };
 
 interface ModalContextType {
@@ -66,6 +71,11 @@ export const ImageFullModalProvider = ({ children }: { children: ReactNode }) =>
         initialIndex={initialIndex}
         editableType={modalOptions.editableType}
         onRequestChange={modalOptions.onRequestChange}
+        isStory={modalOptions.isStory}
+        userName={modalOptions.userName}
+        userAvatar={modalOptions.userAvatar}
+        storyTimestamps={modalOptions.storyTimestamps}
+        onDeleteStory={modalOptions.onDeleteStory}
       />
     </ModalContext.Provider>
   );

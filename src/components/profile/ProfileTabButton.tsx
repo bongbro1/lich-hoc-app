@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Pressable, Text, Animated, StyleSheet } from 'react-native';
+import { Pressable, Text, Animated, StyleSheet, View } from 'react-native';
 import { useUser } from '../../contexts/UserContext';
 import { Colors } from '../../utils/theme';
 
@@ -11,46 +11,42 @@ type TabProps = {
 
 export default function ProfileTabButton({ label, active, onPress }: TabProps) {
     const { darkMode } = useUser();
-    const scale = useRef(new Animated.Value(0)).current;
-    const opacity = useRef(new Animated.Value(0)).current;
+    const indicatorAnim = useRef(new Animated.Value(active ? 1 : 0)).current;
 
     useEffect(() => {
-        if (active) {
-            Animated.parallel([
-                Animated.spring(scale, {
-                    toValue: 1,
-                    damping: 12,
-                    stiffness: 160,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(opacity, {
-                    toValue: 1,
-                    duration: 150,
-                    useNativeDriver: true,
-                }),
-            ]).start();
-        } else {
-            scale.setValue(0);
-            opacity.setValue(0);
-        }
-    }, [active, opacity, scale]);
+        Animated.timing(indicatorAnim, {
+            toValue: active ? 1 : 0,
+            duration: 160,
+            useNativeDriver: false,
+        }).start();
+    }, [active, indicatorAnim]);
 
     return (
-        <Pressable 
-            onPress={onPress} 
-            style={({ pressed }) => [styles.tabBtn, { backgroundColor: pressed ? (darkMode ? '#334155' : '#F1F5F9') : 'transparent' }]} 
+        <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+                styles.tabBtn,
+                { backgroundColor: pressed ? (darkMode ? '#334155' : '#F1F5F9') : 'transparent' }
+            ]}
         >
-            <Text style={[styles.tabText, { color: darkMode ? (active ? Colors.primary : '#94A3B8') : (active ? Colors.primary : Colors.gray) }]}>
+            <Text style={[styles.tabText, {
+                color: active
+                    ? Colors.primary
+                    : (darkMode ? '#94A3B8' : '#64748B'),
+                fontWeight: active ? '700' : '600',
+            }]}>
                 {label}
             </Text>
 
+            {/* Bottom underline indicator (Facebook style) */}
             <Animated.View
                 style={[
                     styles.tabIndicator,
                     {
-                        opacity,
-                        transform: [{ scaleX: scale }],
-                    },
+                        backgroundColor: Colors.primary,
+                        opacity: indicatorAnim,
+                        transform: [{ scaleX: indicatorAnim }],
+                    }
                 ]}
             />
         </Pressable>
@@ -60,18 +56,20 @@ export default function ProfileTabButton({ label, active, onPress }: TabProps) {
 const styles = StyleSheet.create({
     tabBtn: {
         flex: 1,
-        paddingVertical: 12,
-        alignItems: "center",
+        paddingVertical: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
     },
     tabText: {
-        fontSize: 15,
-        fontWeight: "600",
+        fontSize: 14,
     },
     tabIndicator: {
-        marginTop: 6,
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
         height: 3,
-        width: "60%",
-        backgroundColor: Colors.primary,
-        borderRadius: 3,
+        borderRadius: 2,
     },
 });
